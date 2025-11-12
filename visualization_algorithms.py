@@ -681,3 +681,182 @@ def plot_multiple_routes_comparison(tours_dict, addresses, directions_matrix,
     
     plt.tight_layout()
     return fig, axes
+
+
+def plot_edge_weight_heatmap(G, title="Travel Time Matrix", figsize=(10, 8), 
+                              cmap='viridis', show_values=True, format_time=True):
+    """
+    Create a heatmap visualization of edge weights (travel times) in a graph.
+    
+    Parameters:
+    -----------
+    G : networkx.DiGraph or networkx.Graph
+        Graph with weighted edges
+    title : str, optional
+        Title for the plot
+    figsize : tuple, optional
+        Figure size as (width, height)
+    cmap : str, optional
+        Colormap to use (e.g., 'viridis', 'plasma', 'RdYlGn_r', 'coolwarm')
+    show_values : bool, optional
+        Whether to display edge weight values in cells
+    format_time : bool, optional
+        Whether to format values as time (seconds to min:sec)
+    
+    Returns:
+    --------
+    fig, ax : matplotlib figure and axes objects
+    """
+    # Get nodes and create matrix
+    nodes = sorted(list(G.nodes()))
+    n = len(nodes)
+    
+    # Create weight matrix
+    weight_matrix = np.zeros((n, n))
+    
+    for i, node_i in enumerate(nodes):
+        for j, node_j in enumerate(nodes):
+            if G.has_edge(node_i, node_j):
+                weight_matrix[i, j] = G[node_i][node_j].get('weight', 0)
+            elif i == j:
+                weight_matrix[i, j] = 0  # Diagonal is 0
+            else:
+                weight_matrix[i, j] = np.nan  # No edge
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Create heatmap
+    im = ax.imshow(weight_matrix, cmap=cmap, aspect='auto')
+    
+    # Set ticks and labels
+    ax.set_xticks(np.arange(n))
+    ax.set_yticks(np.arange(n))
+    ax.set_xticklabels(nodes)
+    ax.set_yticklabels(nodes)
+    
+    # Rotate x-axis labels
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+    
+    # Add colorbar
+    cbar = plt.colorbar(im, ax=ax)
+    if format_time:
+        cbar.set_label('Travel Time (seconds)', rotation=270, labelpad=20, fontsize=12)
+    else:
+        cbar.set_label('Edge Weight', rotation=270, labelpad=20, fontsize=12)
+    
+    # Add text annotations if requested
+    if show_values:
+        for i in range(n):
+            for j in range(n):
+                value = weight_matrix[i, j]
+                if not np.isnan(value):
+                    if format_time and value > 0:
+                        # Format as min:sec
+                        mins = int(value // 60)
+                        secs = int(value % 60)
+                        text = f"{mins}:{secs:02d}"
+                    else:
+                        text = f"{value:.0f}" if value == int(value) else f"{value:.1f}"
+                    
+                    # Choose text color based on background
+                    # text_color = "white" if value > np.nanmax(weight_matrix) * 0.5 else "black"
+                    text_color = "black"
+                    ax.text(j, i, text, ha="center", va="center", 
+                           color=text_color, fontsize=9, fontweight='bold')
+    
+    # Labels
+    ax.set_xlabel('Destination Node', fontsize=12)
+    ax.set_ylabel('Origin Node', fontsize=12)
+    ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
+    
+    plt.tight_layout()
+    return fig, ax
+
+
+def plot_travel_time_matrix_from_array(travel_time_matrix, node_labels=None,
+                                       title="Travel Time Matrix", figsize=(10, 8),
+                                       cmap='viridis', show_values=True, format_time=True):
+    """
+    Create a heatmap from a travel time matrix (2D array).
+    
+    Parameters:
+    -----------
+    travel_time_matrix : 2D array or list of lists
+        Matrix of travel times between nodes
+    node_labels : list, optional
+        Labels for nodes. If None, uses indices.
+    title : str, optional
+        Title for the plot
+    figsize : tuple, optional
+        Figure size as (width, height)
+    cmap : str, optional
+        Colormap to use
+    show_values : bool, optional
+        Whether to display values in cells
+    format_time : bool, optional
+        Whether to format values as time (seconds to min:sec)
+    
+    Returns:
+    --------
+    fig, ax : matplotlib figure and axes objects
+    """
+    # Convert to numpy array
+    weight_matrix = np.array(travel_time_matrix)
+    n = weight_matrix.shape[0]
+    
+    # Default labels
+    if node_labels is None:
+        node_labels = list(range(n))
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Create heatmap (mask diagonal or zeros if needed)
+    im = ax.imshow(weight_matrix, cmap=cmap, aspect='auto')
+    
+    # Set ticks and labels
+    ax.set_xticks(np.arange(n))
+    ax.set_yticks(np.arange(n))
+    ax.set_xticklabels(node_labels)
+    ax.set_yticklabels(node_labels)
+    
+    # Rotate x-axis labels
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+    
+    # Add colorbar
+    cbar = plt.colorbar(im, ax=ax)
+    if format_time:
+        cbar.set_label('Travel Time (seconds)', rotation=270, labelpad=20, fontsize=12)
+    else:
+        cbar.set_label('Edge Weight', rotation=270, labelpad=20, fontsize=12)
+    
+    # Add text annotations if requested
+    if show_values:
+        max_val = np.max(weight_matrix[weight_matrix > 0]) if np.any(weight_matrix > 0) else 1
+        
+        for i in range(n):
+            for j in range(n):
+                value = weight_matrix[i, j]
+                if value > 0 or i == j:  # Show diagonal zeros but not missing edges
+                    if format_time and value > 0:
+                        # Format as min:sec
+                        mins = int(value // 60)
+                        secs = int(value % 60)
+                        text = f"{mins}:{secs:02d}"
+                    else:
+                        text = f"{value:.0f}" if value == int(value) else f"{value:.1f}"
+                    
+                    # Choose text color based on background
+                    # text_color = "white" if value > max_val * 0.5 else "black"
+                    text_color = "black"
+                    ax.text(j, i, text, ha="center", va="center",
+                           color=text_color, fontsize=9, fontweight='bold')
+    
+    # Labels
+    ax.set_xlabel('Destination Node', fontsize=12)
+    ax.set_ylabel('Origin Node', fontsize=12)
+    ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
+    
+    plt.tight_layout()
+    return fig, ax

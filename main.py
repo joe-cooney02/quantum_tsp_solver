@@ -9,7 +9,7 @@ entry point to the program
 from google_maps import get_travel_time_matrix, get_address_set, get_directions_matrix
 from optimization_engines import tsp_brute_force, Heuristic_next_closest, Heuristic_weighted_next_closest, SA_approx
 from opt_helpers import graphs_to_tours
-from visualization_algorithms import plot_multiple_routes_comparison, plot_route_on_map, plot_runtime_comparison, plot_travel_times_violin, plot_tour_comparison
+from visualization_algorithms import plot_multiple_routes_comparison, plot_route_on_map, plot_runtime_comparison, plot_travel_times_violin, plot_tour_comparison, plot_edge_weight_heatmap
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
@@ -65,7 +65,7 @@ fig, ax = plot_runtime_comparison(
     title="TSP Algorithm Runtime Comparison: 10 nodes",
     ylabel="Runtime (seconds, log scale)"
 )
-plt.savefig(f'{curr_prob}/sols_runtime.png')
+# plt.savefig(f'{curr_prob}/sols_runtime.png')
 
 
 # make violin plot for trip times
@@ -75,12 +75,12 @@ fig, ax = plot_travel_times_violin(
     title="TSP Algorithm Performance Comparison",
     ylabel="Total Travel Time (seconds)"
 )
-plt.savefig(f'{curr_prob}/sols_distrib.png')
+# plt.savefig(f'{curr_prob}/sols_distrib.png')
     
     
 # Plot graphs comparison
 fig, axes = plot_tour_comparison(graphs_dict, layout='circular')
-plt.savefig(f'{curr_prob}/sols_found.png')
+# plt.savefig(f'{curr_prob}/sols_found.png')
 
 
 # plot maps comparison
@@ -92,19 +92,23 @@ fig, ax = plot_route_on_map(tours_dict['Brute-Force'], address_set, dirs_mat,
                             use_map_background=True, 
                             map_style='sattelite')
 
-plt.savefig(f'{curr_prob}/BFS_map.png')
+# plt.savefig(f'{curr_prob}/BFS_map.png')
 
 # plot all routes
 fig, axes = plot_multiple_routes_comparison(tours_dict, address_set, dirs_mat,
                                             use_map_background=True, 
                                             map_style='sattelite')
 
-plt.savefig(f'{curr_prob}/all_maps.png')
+# plt.savefig(f'{curr_prob}/all_maps.png')
 
+
+fig, ax = plot_edge_weight_heatmap(graph, title="TSP Edge Weights")
+
+# plt.savefig(f'{curr_prob}/edge_weights.png')
 
 plt.show()
 
-
+'''
 # save data
 with open(f'{curr_prob}/tours.json', 'w') as f:
     json.dump(tours_dict, f)
@@ -120,8 +124,8 @@ with open(f'{curr_prob}/travel-times.json', 'w') as f:
 
 with open(f'{curr_prob}/all-travel-times.json', 'w') as f:
     f.writelines([f'{i}, ' for i in all_travel_times])
-
-
+    
+'''
 
 
 

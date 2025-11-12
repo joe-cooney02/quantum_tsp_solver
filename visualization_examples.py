@@ -7,7 +7,7 @@ Created on Fri Oct 31 11:18:37 2025
 
 # this file contains examples for the visualization algorithms.
 from google_maps import get_address_set, get_directions_matrix
-from visualization_algorithms import plot_multiple_routes_comparison, plot_route_on_map, plot_runtime_comparison, plot_tour_comparison, plot_travel_times_violin
+from visualization_algorithms import plot_multiple_routes_comparison, plot_route_on_map, plot_runtime_comparison, plot_tour_comparison, plot_travel_times_violin, plot_edge_weight_heatmap, plot_travel_time_matrix_from_array
 import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     }
     
     # Create the plot
-    fig, ax = plot_runtime_comparison(
+    fig0, ax0 = plot_runtime_comparison(
         runtime_data,
         title="TSP Algorithm Runtime Comparison: Example",
         ylabel="Runtime (seconds, log scale)"
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     }
     
     # Plot comparison
-    fig, axes = plot_tour_comparison(tour_dict, layout='circular')
+    fig1, axes1 = plot_tour_comparison(tour_dict, layout='circular')
     
     
     # Single route
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     directions_matrix = get_directions_matrix('dir-mat_4m_10_1.json')
     addresses = get_address_set('address-set_4m_10_1.txt')
     
-    fig, ax = plot_route_on_map(tour, addresses, directions_matrix, 
+    fig2, ax2 = plot_route_on_map(tour, addresses, directions_matrix, 
                              title="Brute Force Solution", 
                              use_map_background=True, 
                              map_style='sattelite')
@@ -111,8 +111,38 @@ if __name__ == "__main__":
         'Greedy': [0, 2, 1, 4, 3, 0]
         }
     
-    fig, axes = plot_multiple_routes_comparison(tours, addresses, directions_matrix, 
+    fig3, axes3 = plot_multiple_routes_comparison(tours, addresses, directions_matrix, 
                                                 use_map_background=True, 
                                                 map_style='sattelite')
+    
+    
+    # graph 2d heatmap of edge weights (travel times)
+    # Example 1: From NetworkX graph
+    G = nx.DiGraph()
+    edges = [
+        (0, 1, 120), (0, 2, 180), (0, 3, 240),
+        (1, 0, 120), (1, 2, 300), (1, 3, 200),
+        (2, 0, 180), (2, 1, 300), (2, 3, 150),
+        (3, 0, 240), (3, 1, 200), (3, 2, 150)
+    ]
+    
+    for u, v, w in edges:
+        G.add_edge(u, v, weight=w)
+    
+    fig4, ax4 = plot_edge_weight_heatmap(G, title="TSP Edge Weights (NetworkX Graph)",
+                                         cmap='YlOrRd')
+    
+    # Example 2: From travel time matrix array
+    travel_times = [
+        [0, 120, 180, 240],
+        [120, 0, 300, 200],
+        [180, 300, 0, 150],
+        [240, 200, 150, 0]
+    ]
+    
+    fig5, ax5 = plot_travel_time_matrix_from_array(travel_times,
+                                                   node_labels=['A', 'B', 'C', 'D'],
+                                                   title="Travel Time Matrix",
+                                                   cmap='plasma')
     
     plt.show()

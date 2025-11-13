@@ -860,3 +860,198 @@ def plot_travel_time_matrix_from_array(travel_time_matrix, node_labels=None,
     
     plt.tight_layout()
     return fig, ax
+
+
+def plot_benchmark_results(benchmark_results, figsize=(12, 5)):
+    """
+    Visualize benchmarking results showing time and memory usage vs batch size.
+    
+    Parameters:
+    -----------
+    benchmark_results : dict
+        Results from benchmark_batch_sizes function
+        Format: {batch_size: {'time': float, 'memory_peak_mb': float, 'success': bool}}
+    figsize : tuple, optional
+        Figure size as (width, height)
+    
+    Returns:
+    --------
+    fig, axes : matplotlib figure and axes objects
+    """
+    # Extract successful results
+    successful = {bs: r for bs, r in benchmark_results.items() if r['success']}
+    failed = {bs: r for bs, r in benchmark_results.items() if not r['success']}
+    
+    if not successful:
+        print("No successful benchmarks to plot!")
+        return None, None
+    
+    batch_sizes = sorted(successful.keys())
+    times = [successful[bs]['time'] for bs in batch_sizes]
+    memories = [successful[bs]['memory_peak_mb'] for bs in batch_sizes]
+    
+    # Create figure with two subplots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
+    
+    # Plot 1: Execution Time vs Batch Size
+    ax1.plot(batch_sizes, times, 'o-', linewidth=2, markersize=8, color='#1f77b4', label='Successful')
+    
+    # Mark failed batch sizes
+    if failed:
+        failed_sizes = sorted(failed.keys())
+        ax1.scatter(failed_sizes, [max(times)] * len(failed_sizes), 
+                   marker='x', s=200, color='red', linewidths=3, 
+                   label='Failed', zorder=5)
+    
+    ax1.set_xlabel('Batch Size (qubits)', fontsize=12)
+    ax1.set_ylabel('Execution Time (seconds)', fontsize=12)
+    ax1.set_title('Simulation Time vs Batch Size', fontsize=14, fontweight='bold')
+    ax1.grid(True, alpha=0.3)
+    ax1.legend()
+    
+    # Highlight optimal (minimum time)
+    optimal_idx = np.argmin(times)
+    optimal_bs = batch_sizes[optimal_idx]
+    ax1.axvline(optimal_bs, color='green', linestyle='--', linewidth=2, alpha=0.7)
+    ax1.text(optimal_bs, max(times) * 0.9, f'Optimal\n({optimal_bs})', 
+            ha='center', fontweight='bold', color='green')
+    
+    # Plot 2: Peak Memory vs Batch Size
+    ax2.plot(batch_sizes, memories, 'o-', linewidth=2, markersize=8, color='#ff7f0e', label='Peak Memory')
+    
+    # Mark failed batch sizes
+    if failed:
+        ax2.scatter(failed_sizes, [max(memories)] * len(failed_sizes), 
+                   marker='x', s=200, color='red', linewidths=3, 
+                   label='Failed', zorder=5)
+    
+    ax2.set_xlabel('Batch Size (qubits)', fontsize=12)
+    ax2.set_ylabel('Peak Memory (MB)', fontsize=12)
+    ax2.set_title('Memory Usage vs Batch Size', fontsize=14, fontweight='bold')
+    ax2.grid(True, alpha=0.3)
+    ax2.legend()
+    
+    # Add horizontal line for typical memory limit
+    # ax2.axhline(32000, color='red', linestyle=':', linewidth=2, alpha=0.5, label='32GB RAM')
+    
+    plt.tight_layout()
+    return fig, (ax1, ax2)
+
+
+def plot_qaoa_validity_progress(iteration_data, figsize=(10, 6)):
+    """
+    Plot the progression of valid vs invalid tours during QAOA optimization.
+    
+    Parameters:
+    -----------
+    iteration_data : list of dict
+        List where each element represents one iteration/evaluation with keys:
+        - 'iteration': int (iteration number)
+        - 'valid_shots': int (number of valid tour shots)
+        - 'invalid_shots': int (number of invalid tour shots)
+        - 'best_cost': float (optional, best tour cost found so far)
+    figsize : tuple, optional
+        Figure size as (width, height)
+    
+    Returns:
+    --------
+    fig, axes : matplotlib figure and axes objects
+    """
+    iterations = [d['iteration'] for d in iteration_data]
+    valid_shots = [d['valid_shots'] for d in iteration_data]
+    invalid_shots = [d['invalid_shots'] for d in iteration_data]
+    total_shots = [v + i for v, i in zip(valid_shots, invalid_shots)]
+    valid_percent = [100 * v / t if t > 0 else 0 for v, t in zip(valid_shots, total_shots)]
+    
+    # Check if cost data is available
+    has_cost = 'best_cost' in iteration_data[0]
+    
+    if has_cost:
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=figsize, sharex=True)
+    else:
+        fig, ax1 = plt.subplots(1, 1, figsize=figsize)
+        ax2 = None
+    
+    # Plot 1: Stacked area chart of valid vs invalid
+    ax1.fill_between(iterations, 0, valid_shots, alpha=0.7, color='#2ca02c', label='Valid Tours')
+    ax1.fill_between(iterations, valid_shots, total_shots, alpha=0.7, color='#d62728', label='Invalid Tours')
+    
+    ax1.set_ylabel('Number of Shots', fontsize=12)
+    ax1.set_title('QAOA Valid vs Invalid Tours Over Iterations', fontsize=14, fontweight='bold')
+    ax1.legend(loc='upper right')
+    ax1.grid(True, alpha=0.3, axis='y')
+    
+    # Add percentage line on secondary axis
+    ax1_twin = ax1.twinx()
+    ax1_twin.plot(iterations, valid_percent, 'o-', color='blue', linewidth=2, 
+                 markersize=6, label='Valid %', alpha=0.8)
+    ax1_twin.set_ylabel('Valid Tour Percentage (%)', fontsize=12, color='blue')
+    ax1_twin.tick_params(axis='y', labelcolor='blue')
+    ax1_twin.set_ylim(0, 105)
+    
+    # Plot 2: Best cost progression (if available)
+    if has_cost and ax2 is not None:
+        best_costs = [d['best_cost'] for d in iteration_data]
+        ax2.plot(iterations, best_costs, 'o-', linewidth=2, markersize=8, 
+                color='#9467bd', label='Best Tour Cost')
+        
+        ax2.set_xlabel('Iteration', fontsize=12)
+        ax2.set_ylabel('Best Tour Cost', fontsize=12)
+        ax2.set_title('Best Solution Quality Over Iterations', fontsize=14, fontweight='bold')
+        ax2.grid(True, alpha=0.3)
+        ax2.legend()
+        
+        # Highlight improvements
+        for i in range(1, len(best_costs)):
+            if best_costs[i] < best_costs[i-1]:
+                ax2.plot(iterations[i], best_costs[i], 'g*', markersize=15, zorder=5)
+    
+    if not has_cost:
+        ax1.set_xlabel('Iteration', fontsize=12)
+    
+    plt.tight_layout()
+    return fig, (ax1, ax2) if has_cost else (fig, ax1)
+
+
+def plot_qaoa_validity_pie(valid_shots, invalid_shots, title="QAOA Tour Validity", 
+                           figsize=(8, 6)):
+    """
+    Create a pie chart showing the split between valid and invalid tours.
+    
+    Parameters:
+    -----------
+    valid_shots : int
+        Number of valid tour measurements
+    invalid_shots : int
+        Number of invalid tour measurements
+    title : str, optional
+        Title for the plot
+    figsize : tuple, optional
+        Figure size as (width, height)
+    
+    Returns:
+    --------
+    fig, ax : matplotlib figure and axes objects
+    """
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    total = valid_shots + invalid_shots
+    sizes = [valid_shots, invalid_shots]
+    labels = [f'Valid Tours\n({valid_shots} shots, {100*valid_shots/total:.1f}%)',
+              f'Invalid Tours\n({invalid_shots} shots, {100*invalid_shots/total:.1f}%)']
+    colors = ['#2ca02c', '#d62728']
+    explode = (0.05, 0)  # Slightly separate the valid slice
+    
+    wedges, texts, autotexts = ax.pie(sizes, labels=labels, colors=colors, 
+                                       explode=explode, autopct='',
+                                       shadow=True, startangle=90)
+    
+    # Make text bold and larger
+    for text in texts:
+        text.set_fontsize(12)
+        text.set_fontweight('bold')
+    
+    ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
+    
+    plt.tight_layout()
+    return fig, ax

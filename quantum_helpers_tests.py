@@ -7,6 +7,7 @@ Created on Tue Nov 11 16:20:53 2025
 contains examples and/or unit tests for the quantum helper functions
 """
 from quantum_helpers import is_valid_tsp_tour, postselect_best_tour, create_qubit_to_edge_map, create_edge_to_qubit_map, create_tsp_qaoa_circuit, save_qaoa_circuit, load_qaoa_circuit, get_initial_parameters, bind_qaoa_parameters, split_circuit_for_simulation, simulate_large_circuit_in_batches
+from quantum_benchmarking import benchmark_batch_sizes
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -19,7 +20,7 @@ if __name__ == "__main__":
         (1, 0, 10), (1, 2, 35), (1, 3, 25),
         (2, 0, 15), (2, 1, 35), (2, 3, 30),
         (3, 0, 20), (3, 1, 25), (3, 2, 30)
-    ]
+        ]
     
     for u, v, w in edges_with_weights:
         G.add_edge(u, v, weight=w)
@@ -107,7 +108,17 @@ if __name__ == "__main__":
     print("\nSimulating split circuits...")
     results = simulate_large_circuit_in_batches(bound_circuit, max_qubits_per_batch=5, shots=65536)
     print(f"Top 5 results: {dict(list(sorted(results.items(), key=lambda x: x[1], reverse=True))[:5])}")
-   
+
+    
+    # Benchmark different batch sizes
+    print("\n--- Benchmarking Batch Sizes ---")
+    benchmark_results = benchmark_batch_sizes(
+    bound_circuit, 
+    batch_sizes=[4, 6, 8],  # Small values for quick demo
+    shots=50,  # Fewer shots for speed
+    verbose=True
+    )
+    
     # Display circuit structure
     print("\n--- Circuit Diagram (first few gates) ---")
     

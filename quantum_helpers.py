@@ -14,6 +14,7 @@ This is much easier here because travel time information
 from qiskit import QuantumCircuit
 from qiskit.circuit import Parameter
 from qiskit.qpy import dump, load
+from qiskit_aer import AerSimulator
 import numpy as np
 import networkx as nx
 
@@ -197,7 +198,7 @@ def split_circuit_for_simulation(circuit, max_qubits_per_batch=10):
     return sub_circuits
 
 
-def simulate_split_circuits(sub_circuits, shots=1024):
+def simulate_split_circuits(sub_circuits, shots=1024, sim_method='statevector'):
     """
     Simulate split sub-circuits and combine results into full bitstrings.
     
@@ -212,14 +213,13 @@ def simulate_split_circuits(sub_circuits, shots=1024):
     --------
     dict: Dictionary mapping full bitstrings to counts
     """
-    from qiskit_aer import AerSimulator
     
     # Simulate each sub-circuit
     sub_results = []
     
     for sub_circuit, qubit_indices in sub_circuits:
         simulator = AerSimulator()
-        result = simulator.run(sub_circuit, shots=shots).result()
+        result = simulator.run(sub_circuit, shots=shots, method=sim_method).result()
         counts = result.get_counts()
         sub_results.append((counts, qubit_indices))
     
@@ -249,7 +249,7 @@ def simulate_split_circuits(sub_circuits, shots=1024):
     return combined_counts
 
 
-def simulate_large_circuit_in_batches(circuit, max_qubits_per_batch=10, shots=1024):
+def simulate_large_circuit_in_batches(circuit, max_qubits_per_batch=10, shots=1024, sim_method='statevector', verbose=False):
     """
     Convenience function to split and simulate a large circuit in one call.
     
@@ -261,22 +261,32 @@ def simulate_large_circuit_in_batches(circuit, max_qubits_per_batch=10, shots=10
         Maximum qubits per batch
     shots : int, optional
         Number of shots
+    verbose: Bool
+        wether to print progress messages
     
     Returns:
     --------
     dict: Combined measurement results (bitstring -> count)
     """
-    print(f"Splitting circuit with {circuit.num_qubits} qubits into batches of {max_qubits_per_batch}...")
+    
+    if verbose:
+        print(f"Splitting circuit with {circuit.num_qubits} qubits into batches of {max_qubits_per_batch}...")
+    
     sub_circuits = split_circuit_for_simulation(circuit, max_qubits_per_batch)
-    print(f"Created {len(sub_circuits)} sub-circuits")
     
-    for idx, (sub_qc, indices) in enumerate(sub_circuits):
-        print(f"  Batch {idx+1}: qubits {indices[0]}-{indices[-1]} ({len(indices)} qubits)")
+    if verbose:
+        print(f"Created {len(sub_circuits)} sub-circuits")
     
-    print(f"\nSimulating with {shots} shots...")
-    results = simulate_split_circuits(sub_circuits, shots)
+        for idx, (sub_qc, indices) in enumerate(sub_circuits):
+            print(f"  Batch {idx+1}: qubits {indices[0]}-{indices[-1]} ({len(indices)} qubits)")
     
-    print(f"Simulation complete! Got {len(results)} unique bitstrings")
+    if verbose:
+        print(f"\nSimulating with {shots} shots...")
+    
+    results = simulate_split_circuits(sub_circuits, shots, sim_method)
+    
+    if verbose:
+        print(f"Simulation complete! Got {len(results)} unique bitstrings")
     
     return results
 
@@ -631,6 +641,73 @@ def postselect_best_tour(bitstrings, counts, qubit_to_edge_map, G):
     success_rate = valid_shots / total_shots if total_shots > 0 else 0
     
     return best_bitstring, best_tour, best_cost, success_rate
+
+
+    def get_cost_expectation(bitstrings, counts, qubit_to_edge_map, G, inv_penalty=0):
+        """
+        get expectation of cost value from QAOA results.
+        
+        Parameters:
+        -----------
+        bitstrings : list
+            List of unique bitstrings from QAOA measurements
+        counts : list or dict
+            Counts/frequencies for each bitstring (same order as bitstrings)
+            Can be a list of counts or dict mapping bitstring to count
+        qubit_to_edge_map : dict
+            Mapping from qubit index to edge tuple
+        G : networkx.DiGraph
+            The graph representing the TSP problem
+        inv_penalty: float
+            penalty term for invalid solution bitstrings.
+            If this is negative, this will be |inv_penalty| * (max edge weight of G)
+            Default: 0.
+        
+        Returns:
+        --------
+        float: cost_expectation
+               the expectation value to use in optimization loop.
+        """
+        # Convert counts to dict if needed
+        if isinstance(counts, list):
+            counts_dict = {bs: c for bs, c in zip(bitstrings, counts)}
+        else:
+            counts_dict = counts
+            
+        # print(counts_dict)
+        
+        total_shots = sum(counts_dict.values())
+        total_cost = 0
+        
+        # get penalty term
+        if inv_penalty < 0:    
+            edge_weights = [data['weight'] for u, v, data in G.edges(data=True)]
+            inv_penalty = abs(inv_penalty) * max(edge_weights)
+        
+        # iterate through bitstrings
+        for bitstring in bitstrings:
+            is_valid, tour = is_valid_tsp_tour(bitstring, qubit_to_edge_map, G, return_tour=True)
+            
+            if is_valid:               
+                # Calculate tour cost
+                cost = 0
+                for i in range(len(tour) - 1):
+                    u, v = tour[i], tour[i+1]
+                    if G.has_edge(u, v):
+                        cost += G[u][v]['weight']
+                        
+                total_cost += cost * counts_dict[bitstring]
+                
+            else:
+                # apply penalty
+                total_cost += inv_penalty * counts_dict[bitstring]
+                    
+        cost_expectation = total_cost / total_shots
+        
+        return cost_expectation 
+
+
+
 
 
 

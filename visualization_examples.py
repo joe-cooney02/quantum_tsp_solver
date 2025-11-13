@@ -7,7 +7,11 @@ Created on Fri Oct 31 11:18:37 2025
 
 # this file contains examples for the visualization algorithms.
 from google_maps import get_address_set, get_directions_matrix
-from visualization_algorithms import plot_multiple_routes_comparison, plot_route_on_map, plot_runtime_comparison, plot_tour_comparison, plot_travel_times_violin, plot_edge_weight_heatmap, plot_travel_time_matrix_from_array
+from visualization_algorithms import plot_multiple_routes_comparison, plot_route_on_map
+from visualization_algorithms import plot_runtime_comparison, plot_tour_comparison
+from visualization_algorithms import plot_travel_times_violin, plot_edge_weight_heatmap
+from visualization_algorithms import plot_travel_time_matrix_from_array, plot_benchmark_results
+from visualization_algorithms import plot_qaoa_validity_pie, plot_qaoa_validity_progress
 import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
@@ -144,5 +148,38 @@ if __name__ == "__main__":
                                                    node_labels=['A', 'B', 'C', 'D'],
                                                    title="Travel Time Matrix",
                                                    cmap='plasma')
+    # benchmarking
+    # Example 1: Benchmark results
+    print("Example 1: Benchmark Results Visualization")
+    benchmark_data = {
+        5: {'time': 12.5, 'memory_peak_mb': 2500, 'success': True},
+        8: {'time': 8.3, 'memory_peak_mb': 5100, 'success': True},
+        10: {'time': 6.2, 'memory_peak_mb': 8000, 'success': True},
+        12: {'time': 7.8, 'memory_peak_mb': 11500, 'success': True},
+        15: {'time': 9.5, 'memory_peak_mb': 18000, 'success': True},
+        20: {'time': 15.2, 'memory_peak_mb': 32000, 'success': True},
+        25: {'time': 0, 'memory_peak_mb': 0, 'success': False},
+    }
+    
+    fig6, axes6 = plot_benchmark_results(benchmark_data)
+    
+    # Example 2: QAOA progress with cost
+    print("\nExample 2: QAOA Progress Visualization")
+    qaoa_progress = [
+        {'iteration': 0, 'valid_shots': 50, 'invalid_shots': 974, 'best_cost': 250},
+        {'iteration': 1, 'valid_shots': 120, 'invalid_shots': 904, 'best_cost': 230},
+        {'iteration': 2, 'valid_shots': 200, 'invalid_shots': 824, 'best_cost': 220},
+        {'iteration': 3, 'valid_shots': 280, 'invalid_shots': 744, 'best_cost': 215},
+        {'iteration': 4, 'valid_shots': 350, 'invalid_shots': 674, 'best_cost': 205},
+        {'iteration': 5, 'valid_shots': 420, 'invalid_shots': 604, 'best_cost': 200},
+        {'iteration': 6, 'valid_shots': 480, 'invalid_shots': 544, 'best_cost': 195},
+        {'iteration': 7, 'valid_shots': 520, 'invalid_shots': 504, 'best_cost': 190},
+    ]
+    
+    fig7, axes7 = plot_qaoa_validity_progress(qaoa_progress)
+    
+    # Example 3: Pie chart
+    print("\nExample 3: Validity Pie Chart")
+    fig8, ax8 = plot_qaoa_validity_pie(520, 504, title="Final QAOA Results")
     
     plt.show()

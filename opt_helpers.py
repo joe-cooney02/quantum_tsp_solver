@@ -6,6 +6,7 @@ Created on Wed Nov  5 12:13:46 2025
 """
 
 import networkx as nx
+import numpy as np
 
 # contains helper functions for TSP problems
 def get_trip_time(graph):
@@ -93,3 +94,75 @@ def graphs_to_tours(tour_graphs_dict):
         tours_dict[name] = tour
     
     return tours_dict
+
+
+def get_warm_start_tour(G, method='nearest_neighbor', start_node=None):
+    """
+    Generate a warm-start tour using a classical heuristic.
+    
+    Parameters:
+    -----------
+    G : networkx.DiGraph
+        The TSP graph
+    method : str, optional
+        Heuristic method: nearest_neighbor', 'random'
+    start_node : optional
+        Starting node for the tour
+    
+    Returns:
+    --------
+    list: Tour as ordered list of nodes (including return to start)
+    """
+    
+    nodes = list(G.nodes())
+    if start_node is None:
+        start_node = nodes[0]
+    
+    
+    if method == 'nearest_neighbor':
+        # Greedy: always pick the shortest available edge
+        # unfortunately, we can't use the alg from optimization_engines - circular imports.
+        # conveniently, this is pretty short code.
+        
+        unvisited = set(nodes)
+        tour = [start_node]
+        unvisited.remove(start_node)
+        
+        current = start_node
+        while unvisited:
+            # Find nearest unvisited neighbor
+            best_next = None
+            best_weight = float('inf')
+            
+            for next_node in unvisited:
+                if G.has_edge(current, next_node):
+                    weight = G[current][next_node]['weight']
+                    if weight < best_weight:
+                        best_weight = weight
+                        best_next = next_node
+            
+            if best_next is None:
+                # No edge available, pick any unvisited node
+                best_next = unvisited.pop()
+                unvisited.add(best_next)
+            
+            tour.append(best_next)
+            unvisited.remove(best_next)
+            current = best_next
+        
+        tour.append(start_node)  # Return to start
+        
+        return tour
+    
+    
+    elif method == 'random':
+        # Random valid tour
+        tour = nodes.copy()
+        np.random.shuffle(tour)
+        # Make sure start_node is first
+        tour.remove(start_node)
+        tour = [start_node] + tour + [start_node]
+        return tour
+    
+    else:
+        raise ValueError(f"Unknown method: {method}")

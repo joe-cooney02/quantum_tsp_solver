@@ -1055,3 +1055,173 @@ def plot_qaoa_validity_pie(valid_shots, invalid_shots, title="QAOA Tour Validity
     
     plt.tight_layout()
     return fig, ax
+
+
+def plot_qaoa_cost_convergence(qaoa_stats_list, figsize=(10, 6), 
+                                show_expectation=False):
+    """
+    Plot the cost/energy convergence of QAOA optimization over iterations.
+    
+    Parameters:
+    -----------
+    qaoa_stats_list : list of dict
+        List of statistics dictionaries from get_qaoa_statistics
+        Each should have keys: 'iteration', 'best_cost', 'expectation_value' (optional),
+                               'valid_percentage', etc.
+    figsize : tuple, optional
+        Figure size as (width, height)
+    show_expectation : bool, optional
+        If True and expectation values are available, show them on second y-axis
+    
+    Returns:
+    --------
+    fig, ax : matplotlib figure and axes objects
+    """
+    if not qaoa_stats_list:
+        print("No data to plot!")
+        return None, None
+    
+    iterations = [d.get('iteration', i) for i, d in enumerate(qaoa_stats_list)]
+    best_costs = [d.get('best_cost') for d in qaoa_stats_list]
+    
+    # Check if we have expectation values
+    has_expectation = 'expectation_value' in qaoa_stats_list[0]
+    
+    fig, ax1 = plt.subplots(figsize=figsize)
+    
+    # Plot best cost
+    color1 = '#1f77b4'
+    ax1.plot(iterations, best_costs, 'o-', linewidth=2.5, markersize=8, 
+            color=color1, label='Best Tour Cost', zorder=3)
+    
+    # Mark improvements with stars
+    for i in range(1, len(best_costs)):
+        if best_costs[i] is not None and best_costs[i-1] is not None:
+            if best_costs[i] < best_costs[i-1]:
+                ax1.plot(iterations[i], best_costs[i], '*', 
+                        markersize=20, color='gold', 
+                        markeredgecolor='darkorange', markeredgewidth=2,
+                        zorder=5, label='Improvement' if i == 1 else '')
+    
+    ax1.set_xlabel('Iteration', fontsize=12, fontweight='bold')
+    ax1.set_ylabel('Best Tour Cost', fontsize=12, fontweight='bold', color=color1)
+    ax1.tick_params(axis='y', labelcolor=color1)
+    ax1.grid(True, alpha=0.3, linestyle='--')
+    
+    # Add expectation value on second y-axis if available
+    if show_expectation and has_expectation:
+        expectation_vals = [d.get('expectation_value') for d in qaoa_stats_list]
+        
+        ax2 = ax1.twinx()
+        color2 = '#ff7f0e'
+        ax2.plot(iterations, expectation_vals, 's--', linewidth=2, markersize=6,
+                color=color2, label='Expectation Value', alpha=0.7, zorder=2)
+        ax2.set_ylabel('Cost Expectation Value', fontsize=12, fontweight='bold', color=color2)
+        ax2.tick_params(axis='y', labelcolor=color2)
+        
+        # Combine legends
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
+    else:
+        ax1.legend(loc='upper right')
+    
+    ax1.set_title('QAOA Cost Convergence', fontsize=14, fontweight='bold', pad=15)
+    
+    # Add text box with final statistics
+    if best_costs[-1] is not None:
+        initial_cost = next((c for c in best_costs if c is not None), None)
+        final_cost = best_costs[-1]
+        
+        if initial_cost is not None:
+            improvement = ((initial_cost - final_cost) / initial_cost) * 100
+            textstr = f'Initial: {initial_cost:.1f}\nFinal: {final_cost:.1f}\nImprovement: {improvement:.1f}%'
+            
+            props = dict(boxstyle='round', facecolor='wheat', alpha=0.8)
+            ax1.text(0.02, 0.98, textstr, transform=ax1.transAxes, fontsize=10,
+                    verticalalignment='top', bbox=props)
+    
+    plt.tight_layout()
+    return fig, ax1
+
+
+def plot_qaoa_comprehensive_progress(qaoa_stats_list, figsize=(14, 10)):
+    # TODO: get claude to add legends in all subplots.
+    """
+    Create a comprehensive multi-panel visualization of QAOA progress.
+    
+    Shows: cost convergence, validity rate, and unique bitstrings over iterations.
+    
+    Parameters:
+    -----------
+    qaoa_stats_list : list of dict
+        List of statistics dictionaries from get_qaoa_statistics
+    figsize : tuple, optional
+        Figure size as (width, height)
+    
+    Returns:
+    --------
+    fig, axes : matplotlib figure and axes objects
+    """
+    if not qaoa_stats_list:
+        print("No data to plot!")
+        return None, None
+    
+    iterations = [d.get('iteration', i) for i, d in enumerate(qaoa_stats_list)]
+    best_costs = [d.get('best_cost') for d in qaoa_stats_list]
+    valid_pcts = [d.get('valid_percentage', 0) for d in qaoa_stats_list]
+    unique_bs = [d.get('num_unique_bitstrings', 0) for d in qaoa_stats_list]
+    valid_shots = [d.get('valid_shots', 0) for d in qaoa_stats_list]
+    invalid_shots = [d.get('invalid_shots', 0) for d in qaoa_stats_list]
+    
+    fig = plt.figure(figsize=figsize)
+    gs = fig.add_gridspec(3, 2, hspace=0.3, wspace=0.3)
+    
+    # Panel 1: Best Cost over time
+    ax1 = fig.add_subplot(gs[0, :])
+    ax1.plot(iterations, best_costs, 'o-', linewidth=2.5, markersize=8, color='#1f77b4')
+    
+    # Mark improvements
+    for i in range(1, len(best_costs)):
+        if best_costs[i] is not None and best_costs[i-1] is not None:
+            if best_costs[i] < best_costs[i-1]:
+                ax1.plot(iterations[i], best_costs[i], '*', markersize=20, 
+                        color='gold', markeredgecolor='darkorange', markeredgewidth=2, zorder=5)
+    
+    ax1.set_ylabel('Best Tour Cost', fontsize=11, fontweight='bold')
+    ax1.set_title('QAOA Convergence', fontsize=13, fontweight='bold')
+    ax1.grid(True, alpha=0.3)
+    
+    # Panel 2: Validity percentage
+    ax2 = fig.add_subplot(gs[1, 0])
+    ax2.plot(iterations, valid_pcts, 'o-', linewidth=2, markersize=6, color='#2ca02c')
+    ax2.fill_between(iterations, 0, valid_pcts, alpha=0.3, color='#2ca02c')
+    ax2.set_xlabel('Iteration', fontsize=11)
+    ax2.set_ylabel('Valid Tour %', fontsize=11, fontweight='bold')
+    ax2.set_title('Solution Validity', fontsize=12, fontweight='bold')
+    ax2.set_ylim(0, max(105, max(valid_pcts) * 1.1))
+    ax2.grid(True, alpha=0.3)
+    ax2.axhline(np.average(valid_pcts), color='red', linestyle='--', alpha=0.5, linewidth=1)
+    
+    # Panel 3: Unique bitstrings (diversity)
+    ax3 = fig.add_subplot(gs[1, 1])
+    ax3.plot(iterations, unique_bs, 'o-', linewidth=2, markersize=6, color='#ff7f0e')
+    ax3.set_xlabel('Iteration', fontsize=11)
+    ax3.set_ylabel('Unique Bitstrings', fontsize=11, fontweight='bold')
+    ax3.set_title('Solution Diversity', fontsize=12, fontweight='bold')
+    ax3.grid(True, alpha=0.3)
+    
+    # Panel 4: Valid vs Invalid stacked area
+    ax4 = fig.add_subplot(gs[2, :])
+    total_shots = [v + i for v, i in zip(valid_shots, invalid_shots)]
+    ax4.fill_between(iterations, 0, valid_shots, alpha=0.7, color='#2ca02c', label='Valid')
+    ax4.fill_between(iterations, valid_shots, total_shots, alpha=0.7, color='#d62728', label='Invalid')
+    ax4.set_xlabel('Iteration', fontsize=11, fontweight='bold')
+    ax4.set_ylabel('Number of Shots', fontsize=11, fontweight='bold')
+    ax4.set_title('Valid vs Invalid Tours', fontsize=12, fontweight='bold')
+    ax4.legend(loc='upper right')
+    ax4.grid(True, alpha=0.3, axis='y')
+    
+    plt.suptitle('QAOA Optimization Progress', fontsize=15, fontweight='bold', y=0.995)
+    
+    return fig, (ax1, ax2, ax3, ax4)

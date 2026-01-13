@@ -7,7 +7,7 @@ Created on Wed Nov 12 13:21:27 2025
 This file will benchmark the PC it's running on for QAOA simulations.
 """
 
-from quantum_benchmarking import benchmark_batch_sizes
+from quantum_benchmarking import benchmark_batch_sizes, benchmark_shot_counts
 from quantum_helpers import create_qubit_to_edge_map, create_tsp_qaoa_circuit, get_initial_parameters, bind_qaoa_parameters
 import networkx as nx
 from visualization_algorithms import plot_benchmark_results
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     bound_circuit = bind_qaoa_parameters(qaoa_circuit, gamma_vals, beta_vals)
     print(f"Bound circuit has {len(bound_circuit.parameters)} free parameters (should be 0)")
     
-    
+    '''
     # Benchmark different batch sizes
     print("\n--- Benchmarking Batch Sizes density matrix ---")
     benchmark_dm_results, optimal_dm_size = benchmark_batch_sizes(
@@ -71,11 +71,25 @@ if __name__ == '__main__':
     sim_method='statevector',
     verbose=False
     )
+    '''
+    
+    # Benchmark different shot counts
+    print("\n--- Benchmarking Shot Counts statevector ---")
+    benchmark_shots_sv_results = benchmark_shot_counts(
+    bound_circuit,
+    qubit_to_edge_map,
+    G,
+    batch_size=8,
+    shot_counts=[2**18, 2**19],
+    sim_method='statevector',
+    verbose=False
+    )
     
     # results: on my PC, any batch size between 2-8 qubits will be fine.
         # batch size of 6 -> 4.4s DM, 4.55s statevector.
         # statevector is faster for larger batch sizes.
         
+    '''
     fig0, axes0 = plot_benchmark_results(benchmark_dm_results)
     plt.savefig(f'benchmarking/{num_nodes}_nodes/density_matrix_{shots}s_results.png')
     
@@ -90,3 +104,4 @@ if __name__ == '__main__':
         
     with open(f'benchmarking/{num_nodes}_nodes/statevector_{shots}s_results.json', 'w') as f:
         json.dump(benchmark_sv_results, f)
+    '''

@@ -8,8 +8,11 @@ entry point to the program
 
 from google_maps import get_travel_time_matrix, get_address_set, get_directions_matrix
 from optimization_engines import tsp_brute_force, Heuristic_next_closest, Heuristic_weighted_next_closest, SA_approx
+from quantum_engines import QAOA_approx
 from opt_helpers import graphs_to_tours
-from visualization_algorithms import plot_multiple_routes_comparison, plot_route_on_map, plot_runtime_comparison, plot_travel_times_violin, plot_tour_comparison, plot_edge_weight_heatmap
+from visualization_algorithms import plot_multiple_routes_comparison, plot_route_on_map, plot_runtime_comparison
+from visualization_algorithms import plot_travel_times_violin, plot_tour_comparison, plot_edge_weight_heatmap
+from visualization_algorithms import plot_qaoa_comprehensive_progress
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
@@ -56,6 +59,14 @@ print('SA-2 completed')
 
 graphs_dict, runtime_data, labelled_tt_data = SA_approx(graph, graphs_dict, runtime_data, labelled_tt_data, label='Simulated-Annealing-3')
 print('SA-3 completed')
+
+# QAOA approximation
+# TODO: figure out how to get off the barren plateau.
+graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(graph, graphs_dict, runtime_data, 
+                                                                         labelled_tt_data, shots=1000, 
+                                                                         warm_start='nearest_neighbor',
+                                                                         label='QAOA-WS-NN')
+print('QAOA completed')
 
 
 # visualizations and data saving
@@ -105,6 +116,11 @@ fig, axes = plot_multiple_routes_comparison(tours_dict, address_set, dirs_mat,
 fig, ax = plot_edge_weight_heatmap(graph, title="TSP Edge Weights")
 
 # plt.savefig(f'{curr_prob}/edge_weights.png')
+
+
+fig, ax = plot_qaoa_comprehensive_progress(qaoa_progress)
+
+# plt.savefig(f'{curr_prob}/qaoa_progress.png')
 
 plt.show()
 

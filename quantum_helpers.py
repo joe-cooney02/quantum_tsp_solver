@@ -11,12 +11,14 @@ certain edge in the graph, which corresponds to one qubit. so, just trun on one 
 This is much easier here because travel time information 
 """
 
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, transpile
 from qiskit.circuit import Parameter
 from qiskit.qpy import dump, load
 from qiskit_aer import AerSimulator
 import numpy as np
 import networkx as nx
+from opt_helpers import get_warm_start_tour
+
 
 def create_qubit_to_edge_map(G):
     """
@@ -63,7 +65,7 @@ def create_edge_to_qubit_map(G):
     return edge_to_qubit_map
 
 
-def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False):
+def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False, warm_start_tour=None):
     """
     Create a QAOA circuit for TSP using only single-qubit gates.
     
@@ -80,6 +82,10 @@ def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False):
     barriers: bool, optional
         Wether to add barriers to the circuit. 
         Do not add barriers if you want to split the circuit.
+        
+    warm_start_tour : list, optional
+        Initial tour to warm-start from (e.g., from greedy algorithm)
+        If provided, initializes circuit in this solution instead of equal superposition
     
     Returns:
     --------
@@ -94,8 +100,25 @@ def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False):
     gamma_params = [Parameter(f'gamma_{i}') for i in range(num_layers)]
     beta_params = [Parameter(f'beta_{i}') for i in range(num_layers)]
     
-    # Initial state: equal superposition
-    qc.h(range(num_qubits))
+    # Initial state
+    if warm_start_tour is not None:
+        # Warm-start: Initialize in a basis state corresponding to the tour
+        # Convert tour to bitstring
+        edge_to_qubit = {edge: qubit for qubit, edge in qubit_to_edge_map.items()}
+        
+        for i in range(len(warm_start_tour) - 1):
+            edge = (warm_start_tour[i], warm_start_tour[i+1])
+            if edge in edge_to_qubit:
+                qubit_idx = edge_to_qubit[edge]
+                qc.x(qubit_idx)  # Set this qubit to |1⟩
+        
+        # Add small superposition to allow exploration
+        # This is key to avoid getting stuck in local minima
+        for qubit_idx in range(num_qubits):
+            qc.ry(0.2, qubit_idx)  # Small rotation to add exploration
+    else:
+        # Standard initialization: equal superposition
+        qc.h(range(num_qubits))
     
     if barriers:
         qc.barrier()
@@ -127,6 +150,41 @@ def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False):
         qc.measure(i, i)
     
     return qc
+
+
+def create_warm_started_qaoa(G, qubit_to_edge_map, num_layers=1, 
+                             warm_start_method='greedy', exploration_strength=0.2):
+    """
+    Create a warm-started QAOA circuit with configurable exploration.
+    
+    Parameters:
+    -----------
+    G : networkx.DiGraph
+        The TSP graph
+    qubit_to_edge_map : dict
+        Qubit to edge mapping
+    num_layers : int, optional
+        Number of QAOA layers
+    warm_start_method : str, optional
+        Method to generate initial tour: 'greedy', 'random', or None for standard QAOA
+    exploration_strength : float, optional
+        How much to perturb the initial state (0 = pure warm-start, larger = more exploration)
+        Typical range: 0.1 to 0.5
+    
+    Returns:
+    --------
+    QuantumCircuit: QAOA circuit initialized with warm-start
+    """
+    if warm_start_method is None:
+        return create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers, warm_start_tour=None)
+    
+    # Get warm-start tour
+    tour = get_warm_start_tour(G, method=warm_start_method)
+    
+    # Create circuit with warm-start
+    circuit = create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers, warm_start_tour=tour)
+    
+    return circuit
 
 
 def split_circuit_for_simulation(circuit, max_qubits_per_batch=10):
@@ -218,8 +276,12 @@ def simulate_split_circuits(sub_circuits, shots=1024, sim_method='statevector'):
     sub_results = []
     
     for sub_circuit, qubit_indices in sub_circuits:
-        simulator = AerSimulator()
-        result = simulator.run(sub_circuit, shots=shots, method=sim_method).result()
+        simulator = AerSimulator(method=sim_method)
+        
+        transpiled_circuit = transpile(sub_circuit, simulator)
+        
+        job = simulator.run(transpiled_circuit, shots=shots)
+        result = job.result()
         counts = result.get_counts()
         sub_results.append((counts, qubit_indices))
     
@@ -643,71 +705,186 @@ def postselect_best_tour(bitstrings, counts, qubit_to_edge_map, G):
     return best_bitstring, best_tour, best_cost, success_rate
 
 
-    def get_cost_expectation(bitstrings, counts, qubit_to_edge_map, G, inv_penalty=0):
-        """
-        get expectation of cost value from QAOA results.
+def get_cost_expectation(bitstrings, counts, qubit_to_edge_map, G, inv_penalty=0):
+    """
+    get expectation of cost value from QAOA results.
         
-        Parameters:
-        -----------
-        bitstrings : list
-            List of unique bitstrings from QAOA measurements
-        counts : list or dict
-            Counts/frequencies for each bitstring (same order as bitstrings)
-            Can be a list of counts or dict mapping bitstring to count
-        qubit_to_edge_map : dict
-            Mapping from qubit index to edge tuple
-        G : networkx.DiGraph
-            The graph representing the TSP problem
-        inv_penalty: float
-            penalty term for invalid solution bitstrings.
-            If this is negative, this will be |inv_penalty| * (max edge weight of G)
-            Default: 0.
+    Parameters:
+    -----------
+    bitstrings : list
+    List of unique bitstrings from QAOA measurements
+    counts : list or dict
+    Counts/frequencies for each bitstring (same order as bitstrings)
+    Can be a list of counts or dict mapping bitstring to count
+    qubit_to_edge_map : dict
+    Mapping from qubit index to edge tuple
+    G : networkx.DiGraph
+    The graph representing the TSP problem
+    inv_penalty: float
+    penalty term for invalid solution bitstrings.
+    If this is negative, this will be |inv_penalty| * (max edge weight of G)
+    Default: 0.
+    
+    Returns:
+    --------
+    float: cost_expectation
+    the expectation value to use in optimization loop.
+    """
+    # Convert counts to dict if needed
+    if isinstance(counts, list):
+        counts_dict = {bs: c for bs, c in zip(bitstrings, counts)}
+    else:
+        counts_dict = counts
         
-        Returns:
-        --------
-        float: cost_expectation
-               the expectation value to use in optimization loop.
-        """
-        # Convert counts to dict if needed
-        if isinstance(counts, list):
-            counts_dict = {bs: c for bs, c in zip(bitstrings, counts)}
-        else:
-            counts_dict = counts
-            
-        # print(counts_dict)
+    # print(counts_dict)
         
-        total_shots = sum(counts_dict.values())
-        total_cost = 0
+    total_shots = sum(counts_dict.values())
+    total_cost = 0
+    
+    # get penalty term
+    if inv_penalty < 0:    
+        edge_weights = [data['weight'] for u, v, data in G.edges(data=True)]
+        inv_penalty = abs(inv_penalty) * max(edge_weights)
+    
+    # iterate through bitstrings
+    for bitstring in bitstrings:
+        is_valid, tour = is_valid_tsp_tour(bitstring, qubit_to_edge_map, G, return_tour=True)
         
-        # get penalty term
-        if inv_penalty < 0:    
-            edge_weights = [data['weight'] for u, v, data in G.edges(data=True)]
-            inv_penalty = abs(inv_penalty) * max(edge_weights)
-        
-        # iterate through bitstrings
-        for bitstring in bitstrings:
-            is_valid, tour = is_valid_tsp_tour(bitstring, qubit_to_edge_map, G, return_tour=True)
-            
-            if is_valid:               
-                # Calculate tour cost
-                cost = 0
-                for i in range(len(tour) - 1):
-                    u, v = tour[i], tour[i+1]
-                    if G.has_edge(u, v):
-                        cost += G[u][v]['weight']
-                        
-                total_cost += cost * counts_dict[bitstring]
-                
-            else:
-                # apply penalty
-                total_cost += inv_penalty * counts_dict[bitstring]
+        if is_valid:               
+            # Calculate tour cost
+            cost = 0
+            for i in range(len(tour) - 1):
+                u, v = tour[i], tour[i+1]
+                if G.has_edge(u, v):
+                    cost += G[u][v]['weight']
                     
-        cost_expectation = total_cost / total_shots
+            total_cost += cost * counts_dict[bitstring]
+            
+        else:
+            # apply penalty
+            total_cost += inv_penalty * counts_dict[bitstring]
+            
+    cost_expectation = total_cost / total_shots
+    
+    return cost_expectation 
+
+
+def count_valid_invalid(counts, qubit_to_edge_map, G):
+    """
+    Count the number of valid and invalid tour shots from QAOA results.
+    
+    Parameters:
+    -----------
+    counts : dict
+        Dictionary mapping bitstrings to counts (from simulation results)
+    qubit_to_edge_map : dict
+        Mapping from qubit index to edge tuple
+    G : networkx.DiGraph
+        The graph representing the TSP problem
+    
+    Returns:
+    --------
+    tuple: (valid_shots, invalid_shots)
+    """
+    valid_shots = 0
+    invalid_shots = 0
+    
+    for bitstring, count in counts.items():
+        is_valid = is_valid_tsp_tour(bitstring, qubit_to_edge_map, G)
         
-        return cost_expectation 
+        if is_valid:
+            valid_shots += count
+        else:
+            invalid_shots += count
+    
+    return valid_shots, invalid_shots
 
 
+def get_best_cost(counts, qubit_to_edge_map, G):
+    """
+    Get the best (lowest) tour cost from QAOA results.
+    
+    Only considers valid tours.
+    
+    Parameters:
+    -----------
+    counts : dict
+        Dictionary mapping bitstrings to counts (from simulation results)
+    qubit_to_edge_map : dict
+        Mapping from qubit index to edge tuple
+    G : networkx.DiGraph
+        The graph representing the TSP problem
+    
+    Returns:
+    --------
+    float or None: Best tour cost, or None if no valid tours found
+    """
+    best_cost = float('inf')
+    found_valid = False
+    
+    for bitstring in counts.keys():
+        is_valid, tour = is_valid_tsp_tour(bitstring, qubit_to_edge_map, G, return_tour=True)
+        
+        if is_valid:
+            found_valid = True
+            # Calculate tour cost
+            cost = 0
+            for i in range(len(tour) - 1):
+                u, v = tour[i], tour[i+1]
+                if G.has_edge(u, v):
+                    cost += G[u][v]['weight']
+            
+            if cost < best_cost:
+                best_cost = cost
+    
+    return best_cost if found_valid else None
 
+
+def get_qaoa_statistics(counts, qubit_to_edge_map, G, iteration):
+    """
+    Get comprehensive statistics from QAOA results.
+    This is really a wrapper function for postselect_best_tour.
+    
+    Parameters:
+    -----------
+    counts : dict
+        Dictionary mapping bitstrings to counts (from simulation results)
+    qubit_to_edge_map : dict
+        Mapping from qubit index to edge tuple
+    G : networkx.DiGraph
+        The graph representing the TSP problem
+    
+    Returns:
+    --------
+    dict: Statistics including valid/invalid counts, best cost, success rate, etc.
+    """
+    
+    # Get best tour details
+    best_bitstring, best_tour, best_cost, success_rate = postselect_best_tour(
+        list(counts.keys()), counts, qubit_to_edge_map, G
+    )
+    
+    total_shots = sum(counts.values())
+    valid_shots = total_shots * success_rate
+    invalid_shots = total_shots - valid_shots
+    
+    if best_tour is None:
+        # this occurs when there is no valid solution found.
+        best_tour = nx.DiGraph()
+    
+    stats = {
+        'iteration': iteration,
+        'total_shots': total_shots,
+        'valid_shots': valid_shots,
+        'invalid_shots': invalid_shots,
+        'valid_percentage': 100 * success_rate,
+        'best_cost': best_cost,
+        'best_bitstring': best_bitstring,
+        'best_tour': best_tour,
+        'num_unique_bitstrings': len(counts)
+    }
+    
+    return stats
 
 
 

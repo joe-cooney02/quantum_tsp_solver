@@ -233,7 +233,8 @@ def tsp_brute_force(G, graphs_dict: {}, runtime_data: {}, tt_data: {}, start_nod
     start_time = time.time()
     
     nodes = list(G.nodes())
-    all_tour_times = []
+    valid_tours = []
+    all_times = []
     
     if len(nodes) < 2:
         return 0, nodes
@@ -271,7 +272,8 @@ def tsp_brute_force(G, graphs_dict: {}, runtime_data: {}, tt_data: {}, start_nod
         # Update best tour if this one is better
         if valid_tour:
             # record the distance for analysis - might as well!
-            all_tour_times.append(distance)
+            valid_tours.append(tour)
+            all_times.append(distance)
             
             if distance < min_distance:
                 min_distance = distance
@@ -293,7 +295,7 @@ def tsp_brute_force(G, graphs_dict: {}, runtime_data: {}, tt_data: {}, start_nod
     runtime_data[label] = tot_time
     tt_data[label] = get_trip_time(tour_graph)
     
-    return graphs_dict, runtime_data, tt_data, all_tour_times
+    return graphs_dict, runtime_data, tt_data, valid_tours, all_times
     
         
 

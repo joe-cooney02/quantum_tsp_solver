@@ -1,1 +1,1 @@
-{"Brute-Force": 4261, "Worst-Case": 9441, "Nearest-Neighbor": 4861, "Weighted-Nearest-Neighbor": 4861, "Simulated-Annealing-1": 4687, "Simulated-Annealing-2": 4455, "Simulated-Annealing-3": 4635}
+{"Brute-Force": 4261, "Worst-Case": 9441, "Nearest-Neighbor": 4861, "Weighted-Nearest-Neighbor": 4861, "Simulated-Annealing-1": 4861, "Simulated-Annealing-2": 4620, "Simulated-Annealing-3": 4679, "QAOA-NN-Zero": 4861}

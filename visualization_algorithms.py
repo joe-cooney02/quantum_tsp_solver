@@ -13,6 +13,7 @@ from matplotlib.lines import Line2D
 import networkx as nx
 import polyline
 import contextily as ctx
+from quantum_helpers import tour_to_bitstring, hamming_distance
 
 
 def plot_travel_times_violin(travel_times, labeled_points=None, title="Travel Time Distribution", 
@@ -1145,8 +1146,8 @@ def plot_qaoa_cost_convergence(qaoa_stats_list, figsize=(10, 6),
     return fig, ax1
 
 
-def plot_qaoa_comprehensive_progress(qaoa_stats_list, figsize=(14, 10)):
-    # TODO: get claude to add legends in all subplots.
+def plot_qaoa_comprehensive_progress(labelled_qaoa_stats, figsize=(14, 10)):
+    # TODO: get claude to add legends in all subplots and make it so titled by label.
     """
     Create a comprehensive multi-panel visualization of QAOA progress.
     
@@ -1154,8 +1155,8 @@ def plot_qaoa_comprehensive_progress(qaoa_stats_list, figsize=(14, 10)):
     
     Parameters:
     -----------
-    qaoa_stats_list : list of dict
-        List of statistics dictionaries from get_qaoa_statistics
+    labelled_qaoa_stats : dict: title, list of dict
+        List of statistics dictionaries from get_qaoa_statistics,labelled by run
     figsize : tuple, optional
         Figure size as (width, height)
     
@@ -1163,65 +1164,257 @@ def plot_qaoa_comprehensive_progress(qaoa_stats_list, figsize=(14, 10)):
     --------
     fig, axes : matplotlib figure and axes objects
     """
-    if not qaoa_stats_list:
+    if not labelled_qaoa_stats:
         print("No data to plot!")
         return None, None
     
-    iterations = [d.get('iteration', i) for i, d in enumerate(qaoa_stats_list)]
-    best_costs = [d.get('best_cost') for d in qaoa_stats_list]
-    valid_pcts = [d.get('valid_percentage', 0) for d in qaoa_stats_list]
-    unique_bs = [d.get('num_unique_bitstrings', 0) for d in qaoa_stats_list]
-    valid_shots = [d.get('valid_shots', 0) for d in qaoa_stats_list]
-    invalid_shots = [d.get('invalid_shots', 0) for d in qaoa_stats_list]
+    for title, qaoa_stats_list in labelled_qaoa_stats.items():
     
-    fig = plt.figure(figsize=figsize)
-    gs = fig.add_gridspec(3, 2, hspace=0.3, wspace=0.3)
+        iterations = [d.get('iteration', i) for i, d in enumerate(qaoa_stats_list)]
+        best_costs = [d.get('best_cost') for d in qaoa_stats_list]
+        valid_pcts = [d.get('valid_percentage', 0) for d in qaoa_stats_list]
+        unique_bs = [d.get('num_unique_bitstrings', 0) for d in qaoa_stats_list]
+        valid_shots = [d.get('valid_shots', 0) for d in qaoa_stats_list]
+        invalid_shots = [d.get('invalid_shots', 0) for d in qaoa_stats_list]
+        
+        fig = plt.figure(figsize=figsize)
+        gs = fig.add_gridspec(3, 2, hspace=0.3, wspace=0.3)
+        
+        # Panel 1: Best Cost over time
+        ax1 = fig.add_subplot(gs[0, :])
+        ax1.plot(iterations, best_costs, 'o-', linewidth=2.5, markersize=8, color='#1f77b4')
+        
+        # Mark improvements
+        for i in range(1, len(best_costs)):
+            if best_costs[i] is not None and best_costs[i-1] is not None:
+                if best_costs[i] < best_costs[i-1]:
+                    ax1.plot(iterations[i], best_costs[i], '*', markersize=20, 
+                            color='gold', markeredgecolor='darkorange', markeredgewidth=2, zorder=5)
+        
+        ax1.set_ylabel('Best Tour Cost', fontsize=11, fontweight='bold')
+        ax1.set_title('QAOA Convergence', fontsize=13, fontweight='bold')
+        ax1.grid(True, alpha=0.3)
+        
+        # Panel 2: Validity percentage
+        ax2 = fig.add_subplot(gs[1, 0])
+        ax2.plot(iterations, valid_pcts, 'o-', linewidth=2, markersize=6, color='#2ca02c')
+        ax2.fill_between(iterations, 0, valid_pcts, alpha=0.3, color='#2ca02c')
+        ax2.set_xlabel('Iteration', fontsize=11)
+        ax2.set_ylabel('Valid Tour %', fontsize=11, fontweight='bold')
+        ax2.set_title('Solution Validity', fontsize=12, fontweight='bold')
+        ax2.set_ylim(0, max(105, max(valid_pcts) * 1.1))
+        ax2.grid(True, alpha=0.3)
+        ax2.axhline(np.average(valid_pcts), color='red', linestyle='--', alpha=0.5, linewidth=1)
+        
+        # Panel 3: Unique bitstrings (diversity)
+        ax3 = fig.add_subplot(gs[1, 1])
+        ax3.plot(iterations, unique_bs, 'o-', linewidth=2, markersize=6, color='#ff7f0e')
+        ax3.set_xlabel('Iteration', fontsize=11)
+        ax3.set_ylabel('Unique Bitstrings', fontsize=11, fontweight='bold')
+        ax3.set_title('Solution Diversity', fontsize=12, fontweight='bold')
+        ax3.grid(True, alpha=0.3)
+        
+        # Panel 4: Valid vs Invalid stacked area
+        ax4 = fig.add_subplot(gs[2, :])
+        total_shots = [v + i for v, i in zip(valid_shots, invalid_shots)]
+        ax4.fill_between(iterations, 0, valid_shots, alpha=0.7, color='#2ca02c', label='Valid')
+        ax4.fill_between(iterations, valid_shots, total_shots, alpha=0.7, color='#d62728', label='Invalid')
+        ax4.set_xlabel('Iteration', fontsize=11, fontweight='bold')
+        ax4.set_ylabel('Number of Shots', fontsize=11, fontweight='bold')
+        ax4.set_title('Valid vs Invalid Tours', fontsize=12, fontweight='bold')
+        ax4.legend(loc='upper right')
+        ax4.grid(True, alpha=0.3, axis='y')
+        
+        plt.suptitle(f'QAOA Optimization Progress: {title}', fontsize=15, fontweight='bold', y=0.995)
+        
+        return fig, (ax1, ax2, ax3, ax4)
+
+
+def plot_valid_solution_hamming_distances(valid_tours, qubit_to_edge_map, G=None,
+                                          max_solutions=50, figsize=(10, 8)):
+    """
+    Visualize Hamming distances between valid TSP solutions.
     
-    # Panel 1: Best Cost over time
-    ax1 = fig.add_subplot(gs[0, :])
-    ax1.plot(iterations, best_costs, 'o-', linewidth=2.5, markersize=8, color='#1f77b4')
+    Creates a heatmap showing how different valid solutions are from each other.
+    This helps understand the solution landscape and whether solutions cluster.
     
-    # Mark improvements
-    for i in range(1, len(best_costs)):
-        if best_costs[i] is not None and best_costs[i-1] is not None:
-            if best_costs[i] < best_costs[i-1]:
-                ax1.plot(iterations[i], best_costs[i], '*', markersize=20, 
-                        color='gold', markeredgecolor='darkorange', markeredgewidth=2, zorder=5)
+    Parameters:
+    -----------
+    valid_tours : list
+        List of valid tours (each tour is a list of nodes)
+    qubit_to_edge_map : dict
+        Mapping from qubit index to edge tuple
+    G : networkx.DiGraph, optional
+        The TSP graph (for calculating costs to annotate)
+    max_solutions : int, optional
+        Maximum number of solutions to include (for readability)
+    figsize : tuple, optional
+        Figure size as (width, height)
     
-    ax1.set_ylabel('Best Tour Cost', fontsize=11, fontweight='bold')
-    ax1.set_title('QAOA Convergence', fontsize=13, fontweight='bold')
-    ax1.grid(True, alpha=0.3)
+    Returns:
+    --------
+    fig, ax : matplotlib figure and axes objects
+    """
+    from matplotlib.colors import LinearSegmentedColormap
     
-    # Panel 2: Validity percentage
-    ax2 = fig.add_subplot(gs[1, 0])
-    ax2.plot(iterations, valid_pcts, 'o-', linewidth=2, markersize=6, color='#2ca02c')
-    ax2.fill_between(iterations, 0, valid_pcts, alpha=0.3, color='#2ca02c')
-    ax2.set_xlabel('Iteration', fontsize=11)
-    ax2.set_ylabel('Valid Tour %', fontsize=11, fontweight='bold')
-    ax2.set_title('Solution Validity', fontsize=12, fontweight='bold')
-    ax2.set_ylim(0, max(105, max(valid_pcts) * 1.1))
-    ax2.grid(True, alpha=0.3)
-    ax2.axhline(np.average(valid_pcts), color='red', linestyle='--', alpha=0.5, linewidth=1)
+    # Limit number of solutions for readability
+    if len(valid_tours) > max_solutions:
+        valid_tours = valid_tours[:max_solutions]
     
-    # Panel 3: Unique bitstrings (diversity)
-    ax3 = fig.add_subplot(gs[1, 1])
-    ax3.plot(iterations, unique_bs, 'o-', linewidth=2, markersize=6, color='#ff7f0e')
-    ax3.set_xlabel('Iteration', fontsize=11)
-    ax3.set_ylabel('Unique Bitstrings', fontsize=11, fontweight='bold')
-    ax3.set_title('Solution Diversity', fontsize=12, fontweight='bold')
-    ax3.grid(True, alpha=0.3)
+    n_tours = len(valid_tours)
     
-    # Panel 4: Valid vs Invalid stacked area
-    ax4 = fig.add_subplot(gs[2, :])
-    total_shots = [v + i for v, i in zip(valid_shots, invalid_shots)]
-    ax4.fill_between(iterations, 0, valid_shots, alpha=0.7, color='#2ca02c', label='Valid')
-    ax4.fill_between(iterations, valid_shots, total_shots, alpha=0.7, color='#d62728', label='Invalid')
-    ax4.set_xlabel('Iteration', fontsize=11, fontweight='bold')
-    ax4.set_ylabel('Number of Shots', fontsize=11, fontweight='bold')
-    ax4.set_title('Valid vs Invalid Tours', fontsize=12, fontweight='bold')
-    ax4.legend(loc='upper right')
-    ax4.grid(True, alpha=0.3, axis='y')
+    if n_tours < 2:
+        print("Need at least 2 valid tours to compute Hamming distances")
+        return None, None
     
-    plt.suptitle('QAOA Optimization Progress', fontsize=15, fontweight='bold', y=0.995)
+    # Convert tours to bitstrings
+    bitstrings = []
+    tour_costs = []
     
-    return fig, (ax1, ax2, ax3, ax4)
+    for tour in valid_tours:
+        bs = tour_to_bitstring(tour, qubit_to_edge_map)
+        bitstrings.append(bs)
+        
+        # Calculate cost if graph provided
+        if G is not None:
+            cost = 0
+            for i in range(len(tour) - 1):
+                u, v = tour[i], tour[i+1]
+                if G.has_edge(u, v):
+                    cost += G[u][v]['weight']
+            tour_costs.append(cost)
+    
+    # Compute Hamming distance matrix
+    distance_matrix = np.zeros((n_tours, n_tours))
+    
+    for i in range(n_tours):
+        for j in range(n_tours):
+            distance_matrix[i, j] = hamming_distance(bitstrings[i], bitstrings[j])
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Create custom colormap (green for similar, red for different)
+    colors = ['#2ca02c', '#ffff00', '#ff7f0e', '#d62728']
+    n_bins = 100
+    cmap = LinearSegmentedColormap.from_list('hamming', colors, N=n_bins)
+    
+    # Plot heatmap
+    im = ax.imshow(distance_matrix, cmap=cmap, aspect='auto')
+    
+    # Add colorbar
+    cbar = plt.colorbar(im, ax=ax)
+    cbar.set_label('Hamming Distance', rotation=270, labelpad=20, fontsize=12)
+    
+    # Set ticks and labels
+    ax.set_xticks(np.arange(n_tours))
+    ax.set_yticks(np.arange(n_tours))
+    
+    # Create labels with costs if available
+    if tour_costs:
+        labels = [f"#{i} ({cost:.0f})" for i, cost in enumerate(tour_costs)]
+    else:
+        labels = [f"#{i}" for i in range(n_tours)]
+    
+    ax.set_xticklabels(labels, fontsize=8)
+    ax.set_yticklabels(labels, fontsize=8)
+    
+    # Rotate x labels
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+    
+    # Add grid
+    ax.set_xticks(np.arange(n_tours) - 0.5, minor=True)
+    ax.set_yticks(np.arange(n_tours) - 0.5, minor=True)
+    ax.grid(which="minor", color="w", linestyle='-', linewidth=2)
+    
+    # Labels and title
+    ax.set_xlabel('Solution Index (Cost)', fontsize=12)
+    ax.set_ylabel('Solution Index (Cost)', fontsize=12)
+    ax.set_title(f'Hamming Distance Between Valid Solutions\n({n_tours} solutions)', 
+                fontsize=14, fontweight='bold', pad=15)
+    
+    # Add statistics
+    max_dist = len(bitstrings[0])  # Maximum possible Hamming distance
+    avg_dist = np.mean(distance_matrix[np.triu_indices(n_tours, k=1)])
+    min_dist = np.min(distance_matrix[np.triu_indices(n_tours, k=1)])
+    max_observed = np.max(distance_matrix)
+    
+    textstr = f'Max possible: {max_dist}\nMax observed: {max_observed:.0f}\nAvg distance: {avg_dist:.1f}\nMin distance: {min_dist:.0f}'
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.8)
+    ax.text(0.02, 0.98, textstr, transform=ax.transAxes, fontsize=10,
+            verticalalignment='top', bbox=props)
+    
+    plt.tight_layout()
+    return fig, ax
+
+
+def plot_hamming_distance_histogram(valid_tours, qubit_to_edge_map, 
+                                    reference_tour=None, figsize=(10, 6)):
+    """
+    Plot histogram of Hamming distances from a reference solution.
+    
+    Useful for understanding how far QAOA solutions are from a known good solution
+    (e.g., optimal or greedy solution).
+    
+    Parameters:
+    -----------
+    valid_tours : list
+        List of valid tours
+    qubit_to_edge_map : dict
+        Mapping from qubit index to edge tuple
+    reference_tour : list, optional
+        Reference tour to compare against. If None, uses first tour.
+    figsize : tuple, optional
+        Figure size
+    
+    Returns:
+    --------
+    fig, ax : matplotlib figure and axes objects
+    """
+    if not valid_tours:
+        print("No valid tours provided")
+        return None, None
+    
+    # Convert tours to bitstrings
+    bitstrings = [tour_to_bitstring(tour, qubit_to_edge_map) for tour in valid_tours]
+    
+    # Get reference
+    if reference_tour is None:
+        reference_bitstring = bitstrings[0]
+        ref_label = "First solution"
+    else:
+        reference_bitstring = tour_to_bitstring(reference_tour, qubit_to_edge_map)
+        ref_label = "Reference solution"
+    
+    # Calculate distances
+    distances = [hamming_distance(bs, reference_bitstring) for bs in bitstrings]
+    
+    # Create histogram
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    n, bins, patches = ax.hist(distances, bins=range(0, max(distances) + 2), 
+                               edgecolor='black', alpha=0.7, color='#1f77b4')
+    
+    # Color bars by distance
+    max_possible = len(reference_bitstring)
+    for i, patch in enumerate(patches):
+        distance_ratio = bins[i] / max_possible
+        patch.set_facecolor(plt.cm.RdYlGn_r(distance_ratio))
+    
+    ax.set_xlabel('Hamming Distance from Reference', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Number of Solutions', fontsize=12, fontweight='bold')
+    ax.set_title(f'Distribution of Solutions Relative to {ref_label}', 
+                fontsize=14, fontweight='bold')
+    ax.grid(True, alpha=0.3, axis='y')
+    
+    # Add statistics
+    avg_dist = np.mean(distances)
+    median_dist = np.median(distances)
+    
+    textstr = f'Mean: {avg_dist:.1f}\nMedian: {median_dist:.0f}\nMax possible: {max_possible}'
+    props = dict(boxstyle='round', facecolor='lightblue', alpha=0.8)
+    ax.text(0.98, 0.98, textstr, transform=ax.transAxes, fontsize=11,
+            verticalalignment='top', horizontalalignment='right', bbox=props)
+    
+    plt.tight_layout()
+    return fig, ax

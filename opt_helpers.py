@@ -114,10 +114,10 @@ def get_warm_start_tour(G, method='nearest_neighbor', start_node=None):
     list: Tour as ordered list of nodes (including return to start)
     """
     
+    
     nodes = list(G.nodes())
     if start_node is None:
         start_node = nodes[0]
-    
     
     if method == 'nearest_neighbor':
         # Greedy: always pick the shortest available edge

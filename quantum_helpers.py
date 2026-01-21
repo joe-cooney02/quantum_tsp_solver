@@ -65,7 +65,7 @@ def create_edge_to_qubit_map(G):
     return edge_to_qubit_map
 
 
-def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False, warm_start_tour=None):
+def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False, warm_start_tour=None, exploration_strength=0.2):
     """
     Create a QAOA circuit for TSP using only single-qubit gates.
     
@@ -115,7 +115,7 @@ def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False, 
         # Add small superposition to allow exploration
         # This is key to avoid getting stuck in local minima
         for qubit_idx in range(num_qubits):
-            qc.ry(0.2, qubit_idx)  # Small rotation to add exploration
+            qc.ry(exploration_strength, qubit_idx)  # Small rotation to add exploration
     else:
         # Standard initialization: equal superposition
         qc.h(range(num_qubits))
@@ -153,7 +153,7 @@ def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False, 
 
 
 def create_warm_started_qaoa(G, qubit_to_edge_map, num_layers=1, 
-                             warm_start_method='greedy', exploration_strength=0.2):
+                             warm_start_method=None, exploration_strength=0):
     """
     Create a warm-started QAOA circuit with configurable exploration.
     
@@ -165,7 +165,7 @@ def create_warm_started_qaoa(G, qubit_to_edge_map, num_layers=1,
         Qubit to edge mapping
     num_layers : int, optional
         Number of QAOA layers
-    warm_start_method : str, optional
+    warm_start_method : str or a tour (list), optional
         Method to generate initial tour: 'greedy', 'random', or None for standard QAOA
     exploration_strength : float, optional
         How much to perturb the initial state (0 = pure warm-start, larger = more exploration)
@@ -176,13 +176,20 @@ def create_warm_started_qaoa(G, qubit_to_edge_map, num_layers=1,
     QuantumCircuit: QAOA circuit initialized with warm-start
     """
     if warm_start_method is None:
-        return create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers, warm_start_tour=None)
+        return create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers, warm_start_tour=None, 
+                                       exploration_strength=exploration_strength)
     
-    # Get warm-start tour
-    tour = get_warm_start_tour(G, method=warm_start_method)
+    # if tour is provided:
+    if warm_start_method is list():
+        tour = warm_start_method
+        
+    else:
+        # Get warm-start tour
+        tour = get_warm_start_tour(G, method=warm_start_method)
     
     # Create circuit with warm-start
-    circuit = create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers, warm_start_tour=tour)
+    circuit = create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers, warm_start_tour=tour, 
+                                      exploration_strength=exploration_strength)
     
     return circuit
 
@@ -431,7 +438,7 @@ def bind_qaoa_parameters(circuit, gamma_values, beta_values):
     return bound_circuit
 
 
-def get_initial_parameters(num_layers, strategy='random'):
+def get_initial_parameters(num_layers, strategy='random', total_time=1.0):
     """
     Generate initial parameter values for QAOA optimization.
     
@@ -449,13 +456,22 @@ def get_initial_parameters(num_layers, strategy='random'):
     if strategy == 'random':
         gamma_values = np.random.uniform(0, 2*np.pi, num_layers)
         beta_values = np.random.uniform(0, np.pi, num_layers)
+        
     elif strategy == 'linear':
         # Linear interpolation from 0 to optimal-ish values
         gamma_values = np.linspace(0, np.pi/4, num_layers)
         beta_values = np.linspace(0, np.pi/2, num_layers)
+        
     elif strategy == 'zero':
         gamma_values = np.zeros(num_layers)
         beta_values = np.zeros(num_layers)
+        
+    elif strategy == 'tqa':
+        # Trotterized Quantum Annealing (proven to help)
+        s = np.linspace(0, 1, num_layers + 1)[1:]
+        gamma_values = (s * total_time).tolist()
+        beta_values = ((1 - s) * total_time).tolist()
+        
     else:
         raise ValueError(f"Unknown strategy: {strategy}")
     
@@ -887,7 +903,86 @@ def get_qaoa_statistics(counts, qubit_to_edge_map, G, iteration):
     return stats
 
 
+def hamming_distance(bitstring1, bitstring2):
+    """
+    Calculate Hamming distance between two bitstrings.
+    
+    Parameters:
+    -----------
+    bitstring1 : str
+        First bitstring
+    bitstring2 : str
+        Second bitstring
+    
+    Returns:
+    --------
+    int: Number of positions where the bitstrings differ
+    """
+    if len(bitstring1) != len(bitstring2):
+        raise ValueError("Bitstrings must have the same length")
+    
+    return sum(b1 != b2 for b1, b2 in zip(bitstring1, bitstring2))
 
+
+def tour_to_bitstring(tour, qubit_to_edge_map):
+    """
+    Convert a tour (list of nodes) to a bitstring using the qubit-to-edge mapping.
+    
+    Parameters:
+    -----------
+    tour : list
+        Ordered list of nodes representing the tour (including return to start)
+        e.g., [0, 1, 2, 3, 0]
+    qubit_to_edge_map : dict
+        Mapping from qubit index to edge tuple
+        e.g., {0: (0, 1), 1: (0, 2), ...}
+    
+    Returns:
+    --------
+    str: Bitstring where '1' indicates edge is in tour, '0' indicates not in tour
+    """
+    # Create reverse mapping: edge -> qubit
+    edge_to_qubit = {edge: qubit for qubit, edge in qubit_to_edge_map.items()}
+    
+    num_qubits = len(qubit_to_edge_map)
+    bitstring = ['0'] * num_qubits
+    
+    # Set bits for edges in the tour
+    for i in range(len(tour) - 1):
+        edge = (tour[i], tour[i + 1])
+        if edge in edge_to_qubit:
+            qubit_idx = edge_to_qubit[edge]
+            bitstring[qubit_idx] = '1'
+    
+    return ''.join(bitstring)
+
+
+def bitstring_to_tour(bitstring, qubit_to_edge_map):
+    """
+    Convert a bitstring to a tour if it represents a valid tour.
+    
+    Parameters:
+    -----------
+    bitstring : str
+        Binary string representing edge selections
+    qubit_to_edge_map : dict
+        Mapping from qubit index to edge tuple
+    
+    Returns:
+    --------
+    list or None: Tour as ordered list of nodes, or None if invalid
+    """
+    # Get selected edges
+    selected_edges = []
+    for qubit_idx, bit in enumerate(bitstring):
+        if bit == '1' and qubit_idx in qubit_to_edge_map:
+            selected_edges.append(qubit_to_edge_map[qubit_idx])
+    
+    if not selected_edges:
+        return None
+    
+    # Try to build a tour from the edges
+    return extract_tour_from_edges(selected_edges)
 
 
 

@@ -12,6 +12,7 @@ from visualization_algorithms import plot_runtime_comparison, plot_tour_comparis
 from visualization_algorithms import plot_travel_times_violin, plot_edge_weight_heatmap
 from visualization_algorithms import plot_travel_time_matrix_from_array, plot_benchmark_results
 from visualization_algorithms import plot_qaoa_validity_pie, plot_qaoa_validity_progress
+from visualization_algorithms import plot_valid_solution_hamming_distances, plot_hamming_distance_histogram
 import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
@@ -183,3 +184,18 @@ if __name__ == "__main__":
     fig8, ax8 = plot_qaoa_validity_pie(520, 504, title="Final QAOA Results")
     
     plt.show()
+    
+    
+    '''
+    # example 4: QAOA validity tours
+    # Get valid tours from QAOA results
+    valid_tours = [stats['best_tour'] for stats in qaoa_stats_list if stats['best_tour']]
+
+    # Visualize distances between all solutions
+    fig, ax = plot_valid_solution_hamming_distances(valid_tours, qubit_to_edge_map, G)
+
+    # Or compare to a reference (e.g., greedy)
+    greedy_tour = get_warm_start_tour(G, method='greedy')
+    fig, ax = plot_hamming_distance_histogram(valid_tours, qubit_to_edge_map, 
+                                              reference_tour=greedy_tour)
+    '''

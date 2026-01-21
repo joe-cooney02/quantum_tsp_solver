@@ -9,10 +9,12 @@ entry point to the program
 from google_maps import get_travel_time_matrix, get_address_set, get_directions_matrix
 from optimization_engines import tsp_brute_force, Heuristic_next_closest, Heuristic_weighted_next_closest, SA_approx
 from quantum_engines import QAOA_approx
+from quantum_helpers import get_warm_start_tour, create_qubit_to_edge_map
 from opt_helpers import graphs_to_tours
 from visualization_algorithms import plot_multiple_routes_comparison, plot_route_on_map, plot_runtime_comparison
 from visualization_algorithms import plot_travel_times_violin, plot_tour_comparison, plot_edge_weight_heatmap
-from visualization_algorithms import plot_qaoa_comprehensive_progress
+from visualization_algorithms import plot_qaoa_comprehensive_progress, plot_valid_solution_hamming_distances
+from visualization_algorithms import plot_hamming_distance_histogram
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
@@ -32,11 +34,12 @@ graph = nx.from_numpy_array(np.array(ttm), create_using=nx.DiGraph)
 graphs_dict = {}
 runtime_data = {}
 labelled_tt_data = {}
+qaoa_progress = {}
 
 
 # Brute-Force search graph
-graphs_dict, runtime_data, labelled_tt_data, all_travel_times = tsp_brute_force(graph, graphs_dict, runtime_data, labelled_tt_data)
-labelled_tt_data['Worst-Case'] = max(all_travel_times)
+graphs_dict, runtime_data, labelled_tt_data, valid_tours, all_times = tsp_brute_force(graph, graphs_dict, runtime_data, labelled_tt_data)
+labelled_tt_data['Worst-Case'] = max(all_times)
 print('BFS completed')
 
 
@@ -60,42 +63,58 @@ print('SA-2 completed')
 graphs_dict, runtime_data, labelled_tt_data = SA_approx(graph, graphs_dict, runtime_data, labelled_tt_data, label='Simulated-Annealing-3')
 print('SA-3 completed')
 
-# QAOA approximation
-# TODO: figure out how to get off the barren plateau.
+# QAOA approximations
+# common QAOA arguments
+shots = 10000
+inv_penalty_m = 4.5
+
 graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(graph, graphs_dict, runtime_data, 
-                                                                         labelled_tt_data, shots=1000, 
+                                                                         labelled_tt_data, qaoa_progress, 
+                                                                         shots=shots, inv_penalty_m=inv_penalty_m,
                                                                          warm_start='nearest_neighbor',
-                                                                         label='QAOA-WS-NN')
+                                                                         label='QAOA-NN-Zero',
+                                                                         initialization_strategy='zero')
 print('QAOA completed')
 
 
 # visualizations and data saving
+save_all = False
+
+
 # make bar chart for runtimes
 fig, ax = plot_runtime_comparison(
     runtime_data,
     title="TSP Algorithm Runtime Comparison: 10 nodes",
     ylabel="Runtime (seconds, log scale)"
 )
-# plt.savefig(f'{curr_prob}/sols_runtime.png')
+
+if save_all:
+    plt.savefig(f'{curr_prob}/results/sols_runtime.png')
 
 
 # make violin plot for trip times
 fig, ax = plot_travel_times_violin(
-    all_travel_times, 
+    all_times, 
     labeled_points=labelled_tt_data,
     title="TSP Algorithm Performance Comparison",
     ylabel="Total Travel Time (seconds)"
 )
-# plt.savefig(f'{curr_prob}/sols_distrib.png')
+
+if save_all:
+    plt.savefig(f'{curr_prob}/results/sols_distrib.png')
     
     
 # Plot graphs comparison
 fig, axes = plot_tour_comparison(graphs_dict, layout='circular')
-# plt.savefig(f'{curr_prob}/sols_found.png')
+
+if save_all:
+    plt.savefig(f'{curr_prob}/results/sols_found.png')
+
 
 
 # plot maps comparison
 tours_dict = graphs_to_tours(graphs_dict)
+
 
 # plot just brute-force
 fig, ax = plot_route_on_map(tours_dict['Brute-Force'], address_set, dirs_mat, 
@@ -103,45 +122,72 @@ fig, ax = plot_route_on_map(tours_dict['Brute-Force'], address_set, dirs_mat,
                             use_map_background=True, 
                             map_style='sattelite')
 
-# plt.savefig(f'{curr_prob}/BFS_map.png')
+if save_all:
+    plt.savefig(f'{curr_prob}/results/BFS_map.png')
+
 
 # plot all routes
 fig, axes = plot_multiple_routes_comparison(tours_dict, address_set, dirs_mat,
                                             use_map_background=True, 
                                             map_style='sattelite')
 
-# plt.savefig(f'{curr_prob}/all_maps.png')
+if save_all:
+    plt.savefig(f'{curr_prob}/results/all_maps.png')
 
 
+# plot heatmap edge weights
 fig, ax = plot_edge_weight_heatmap(graph, title="TSP Edge Weights")
 
-# plt.savefig(f'{curr_prob}/edge_weights.png')
+if save_all:
+    plt.savefig(f'{curr_prob}/results/edge_weights.png')
 
 
+# plot qaoa progress
 fig, ax = plot_qaoa_comprehensive_progress(qaoa_progress)
 
-# plt.savefig(f'{curr_prob}/qaoa_progress.png')
+if save_all:
+    plt.savefig(f'{curr_prob}/results/qaoa_progress.png')
 
+
+# Get valid tours from QAOA results
+qubit_to_edge_map = create_qubit_to_edge_map(graph)
+
+# Visualize distances between all solutions
+fig, ax = plot_valid_solution_hamming_distances(valid_tours, qubit_to_edge_map, graph)
+
+if save_all:
+    plt.savefig(f'{curr_prob}/results/hamming_dist_50_sols.png')
+
+
+# Or compare to a reference (e.g., greedy)
+greedy_tour = get_warm_start_tour(graph, method='nearest_neighbor')
+fig, ax = plot_hamming_distance_histogram(valid_tours, qubit_to_edge_map, 
+                                          reference_tour=greedy_tour)
+
+plt.savefig(f'{curr_prob}/results/hamming_dist_hist.png')
+
+# show plots
 plt.show()
 
-'''
-# save data
-with open(f'{curr_prob}/tours.json', 'w') as f:
-    json.dump(tours_dict, f)
-    
-    
-with open(f'{curr_prob}/runtimes.json', 'w') as f:
-    json.dump(runtime_data, f)
-    
-    
-with open(f'{curr_prob}/travel-times.json', 'w') as f:
-    json.dump(labelled_tt_data, f)
-    
 
-with open(f'{curr_prob}/all-travel-times.json', 'w') as f:
-    f.writelines([f'{i}, ' for i in all_travel_times])
+if save_all:
+    # save data
+    with open(f'{curr_prob}/tours.json', 'w') as f:
+        json.dump(tours_dict, f)
+        
+        
+    with open(f'{curr_prob}/runtimes.json', 'w') as f:
+        json.dump(runtime_data, f)
+        
+        
+    with open(f'{curr_prob}/travel-times.json', 'w') as f:
+        json.dump(labelled_tt_data, f)
+        
     
-'''
+    with open(f'{curr_prob}/all-travel-times.json', 'w') as f:
+        f.writelines([f'{i}, ' for i in all_times])
+        
+
 
 
 

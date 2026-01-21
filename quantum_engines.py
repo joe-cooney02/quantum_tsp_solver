@@ -28,9 +28,9 @@ from quantum_helpers import create_warm_started_qaoa
 from opt_helpers import tour_to_graph, get_trip_time
 
 
-def QAOA_approx(graph, graphs_dict, runtime_data, tt_data, verbose=True, layers=None, shots=None, 
+def QAOA_approx(graph, graphs_dict, runtime_data, tt_data, qaoa_progress, verbose=True, layers=None, shots=None, 
                 qubit_batch_size=None, inv_penalty_m=1, sim_method='statevector', label='QAOA', warm_start=None, 
-                exploration_strength=None):
+                exploration_strength=0, initialization_strategy='zero'):
     '''
     Parameters
     ----------
@@ -79,7 +79,7 @@ def QAOA_approx(graph, graphs_dict, runtime_data, tt_data, verbose=True, layers=
     
     # create and initialize circuit.
     qubit_to_edge_map = create_qubit_to_edge_map(graph)
-    gamma_values, beta_values = get_initial_parameters(layers)
+    gamma_values, beta_values = get_initial_parameters(layers, strategy=initialization_strategy)
     
     if warm_start == None:
         circuit = create_tsp_qaoa_circuit(graph, qubit_to_edge_map, num_layers=layers)
@@ -128,10 +128,11 @@ def QAOA_approx(graph, graphs_dict, runtime_data, tt_data, verbose=True, layers=
     graphs_dict[label] = TSP_graph
     runtime_data[label] = tot_time
     tt_data[label] = get_trip_time(TSP_graph)
+    qaoa_progress[label] = qaoa_results_over_time
     
     
     # yield output
-    return graphs_dict, runtime_data, tt_data, qaoa_results_over_time
+    return graphs_dict, runtime_data, tt_data, qaoa_progress
 
 
 def run_QAOA(parameters, circuit, batch_size, shots, sim_method, layers, graph, qubit_to_edge_map, results_over_time, inv_penalty=0):
@@ -144,7 +145,7 @@ def run_QAOA(parameters, circuit, batch_size, shots, sim_method, layers, graph, 
     counts = simulate_large_circuit_in_batches(bound_circuit, batch_size, shots, sim_method)
     
     bitstrings = list(counts.keys())
-    expectation_val = get_cost_expectation(bitstrings, counts, qubit_to_edge_map, graph, inv_penalty=0)
+    expectation_val = get_cost_expectation(bitstrings, counts, qubit_to_edge_map, graph, inv_penalty=inv_penalty)
     
     stats = get_qaoa_statistics(counts, qubit_to_edge_map, graph, len(results_over_time))
 

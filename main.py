@@ -7,6 +7,7 @@ entry point to the program
 """
 
 from google_maps import get_travel_time_matrix, get_address_set, get_directions_matrix
+from experiment_logger import save_experiment_results
 from optimization_engines import tsp_brute_force, Heuristic_next_closest, Heuristic_weighted_next_closest, SA_approx
 from quantum_engines import QAOA_approx
 from quantum_helpers import get_warm_start_tour, create_qubit_to_edge_map
@@ -79,6 +80,26 @@ print('QAOA completed')
 
 # visualizations and data saving
 save_all = False
+
+
+experiment_results = {
+    'graphs_dict': graphs_dict,
+    'runtime_data': runtime_data,
+    'tt_data': labelled_tt_data,
+    'qaoa_progress': qaoa_progress,
+    'valid_tours': valid_tours,
+    'all_times': all_times
+    }
+
+hyperparameters = {
+    'layers': 3,
+    'shots': shots,
+    'qubit_batch_size': 8,
+    'inv_penalty_m': inv_penalty_m,
+    'warm_start': 'nearest_neighbor',
+    'exploration_strength': 0.0,
+    'initialization_strategy': 'zero'
+    }
 
 
 # make bar chart for runtimes
@@ -186,7 +207,15 @@ if save_all:
     
     with open(f'{curr_prob}/all-travel-times.json', 'w') as f:
         f.writelines([f'{i}, ' for i in all_times])
-        
+
+
+    save_experiment_results(
+        experiment_name="QAOA_NN_Zero_Init",
+        problem_name=curr_prob,
+        results=experiment_results,
+        hyperparameters=hyperparameters,
+        notes="Testing zero initialization with NN warm-start"
+        )
 
 
 

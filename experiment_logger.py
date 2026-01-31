@@ -49,7 +49,7 @@ def save_experiment_results(experiment_name, problem_name, results, hyperparamet
         - graphs_dict: {algorithm_name: tour_graph}
         - runtime_data: {algorithm_name: runtime_seconds}
         - tt_data: {algorithm_name: travel_time}
-        - qaoa_progress: {label: [qaoa_stats_list]} (optional)
+        - qaoa_progress: {label: [qaoa_stats_list]} (IMPORTANT: Include all QAOA runs)
         - valid_tours: list of tours (optional)
         - all_times: list of all travel times (optional)
     hyperparameters : dict
@@ -57,6 +57,7 @@ def save_experiment_results(experiment_name, problem_name, results, hyperparamet
         - layers, shots, qubit_batch_size, inv_penalty_m, 
         - sim_method, warm_start, exploration_strength, 
         - initialization_strategy, etc.
+        Note: For multi-run experiments, this can be a dict of dicts keyed by run label
     notes : str, optional
         Any additional notes about this experiment
     base_dir : str, optional
@@ -102,12 +103,15 @@ def save_experiment_results(experiment_name, problem_name, results, hyperparamet
             for name, G in results['graphs_dict'].items()
         }
     
-    # Add QAOA progress if available
+    # Add QAOA progress if available - ENHANCED VERSION
     if 'qaoa_progress' in results and results['qaoa_progress']:
         # Convert any non-serializable objects in qaoa_progress
         serializable_progress = {}
+        qaoa_summary = {}  # Summary statistics for each run
+        
         for label, stats_list in results['qaoa_progress'].items():
             serializable_stats = []
+            
             for stats in stats_list:
                 # Create a copy and handle non-serializable fields
                 stat_copy = dict(stats)
@@ -136,8 +140,51 @@ def save_experiment_results(experiment_name, problem_name, results, hyperparamet
                 serializable_stats.append(stat_copy)
             
             serializable_progress[label] = serializable_stats
+            
+            # Create summary for this run
+            if serializable_stats:
+                final_stats = serializable_stats[-1]
+                initial_cost = next((s['best_cost'] for s in serializable_stats 
+                                   if s.get('best_cost') is not None), None)
+                final_cost = final_stats.get('best_cost')
+                
+                qaoa_summary[label] = {
+                    'num_iterations': len(serializable_stats),
+                    'final_validity_pct': final_stats.get('valid_percentage', 0),
+                    'final_best_cost': final_cost,
+                    'initial_cost': initial_cost,
+                    'improvement_pct': ((initial_cost - final_cost) / initial_cost * 100) 
+                                      if (initial_cost and final_cost) else 0,
+                    'avg_validity_pct': np.mean([s.get('valid_percentage', 0) 
+                                                 for s in serializable_stats]),
+                    'avg_diversity': np.mean([s.get('num_unique_bitstrings', 0) 
+                                             for s in serializable_stats]),
+                    'max_validity_pct': max([s.get('valid_percentage', 0) 
+                                            for s in serializable_stats]),
+                    'min_cost': min([s.get('best_cost', float('inf')) 
+                                    for s in serializable_stats 
+                                    if s.get('best_cost') is not None], default=None)
+                }
         
         experiment_data["results"]["qaoa_progress"] = serializable_progress
+        experiment_data["results"]["qaoa_summary"] = qaoa_summary
+        
+        # Add comparison if multiple QAOA runs
+        if len(qaoa_summary) > 1:
+            best_run = min(qaoa_summary.items(), 
+                          key=lambda x: x[1]['final_best_cost'] 
+                          if x[1]['final_best_cost'] else float('inf'))
+            
+            experiment_data["results"]["qaoa_comparison"] = {
+                'best_run_by_cost': best_run[0],
+                'best_final_cost': best_run[1]['final_best_cost'],
+                'best_run_by_validity': max(qaoa_summary.items(), 
+                                           key=lambda x: x[1]['final_validity_pct'])[0],
+                'all_final_costs': {label: summary['final_best_cost'] 
+                                   for label, summary in qaoa_summary.items()},
+                'all_final_validities': {label: summary['final_validity_pct'] 
+                                        for label, summary in qaoa_summary.items()}
+            }
     
     # Add valid tours summary if available
     if 'valid_tours' in results:
@@ -160,7 +207,28 @@ def save_experiment_results(experiment_name, problem_name, results, hyperparamet
     with open(filename, 'w') as f:
         json.dump(experiment_data, f, indent=2)
     
-    print(f"Experiment results saved to: {filename}")
+    print(f"\nExperiment results saved to: {filename}")
+    
+    # Print summary to console
+    if 'qaoa_summary' in experiment_data["results"]:
+        print("\n" + "="*70)
+        print("QAOA RUNS SUMMARY")
+        print("="*70)
+        for label, summary in experiment_data["results"]["qaoa_summary"].items():
+            print(f"\n{label}:")
+            print(f"  Final Validity: {summary['final_validity_pct']:.1f}%")
+            print(f"  Final Cost: {summary['final_best_cost']:.2f}s" if summary['final_best_cost'] else "  Final Cost: N/A")
+            print(f"  Improvement: {summary['improvement_pct']:.1f}%")
+            print(f"  Avg Validity: {summary['avg_validity_pct']:.1f}%")
+            print(f"  Avg Diversity: {summary['avg_diversity']:.1f}")
+        
+        if 'qaoa_comparison' in experiment_data["results"]:
+            comp = experiment_data["results"]["qaoa_comparison"]
+            print(f"\n{'='*70}")
+            print(f"Best run by cost: {comp['best_run_by_cost']} ({comp['best_final_cost']:.2f}s)")
+            print(f"Best run by validity: {comp['best_run_by_validity']}")
+            print("="*70)
+    
     return str(filename)
 
 

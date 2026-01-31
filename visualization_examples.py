@@ -12,7 +12,8 @@ from visualization_algorithms import plot_runtime_comparison, plot_tour_comparis
 from visualization_algorithms import plot_travel_times_violin, plot_edge_weight_heatmap
 from visualization_algorithms import plot_travel_time_matrix_from_array, plot_benchmark_results
 from visualization_algorithms import plot_qaoa_validity_pie, plot_qaoa_validity_progress
-from visualization_algorithms import plot_valid_solution_hamming_distances, plot_hamming_distance_histogram
+from visualization_algorithms import plot_qaoa_comprehensive_progress, plot_qaoa_comparison
+from visualization_algorithms import plot_qaoa_final_comparison_bars
 import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
@@ -102,8 +103,8 @@ if __name__ == "__main__":
     
     # Single route
     tour = [0, 1, 2, 3, 4, 0]
-    directions_matrix = get_directions_matrix('dir-mat_4m_10_1.json')
-    addresses = get_address_set('address-set_4m_10_1.txt')
+    directions_matrix = get_directions_matrix('4m_10_1/dir-mat.json')
+    addresses = get_address_set('4m_10_1/address-set.txt')
     
     fig2, ax2 = plot_route_on_map(tour, addresses, directions_matrix, 
                              title="Brute Force Solution", 
@@ -185,6 +186,120 @@ if __name__ == "__main__":
     
     plt.show()
     
+    
+    # =============================================================================
+    # NEW EXAMPLES: QAOA Comparison Visualizations
+    # =============================================================================
+    
+    print("\n" + "="*70)
+    print("NEW: QAOA Multi-Run Comparison Examples")
+    print("="*70)
+    
+    # Create mock data for multiple QAOA runs
+    np.random.seed(42)
+    
+    # Simulate different QAOA runs with different characteristics
+    qaoa_runs = {}
+    
+    # Run 1: Baseline (poor validity, slow convergence)
+    baseline_stats = []
+    for i in range(15):
+        valid_pct = min(15 + i * 2 + np.random.randn() * 3, 35)  # Low validity
+        baseline_stats.append({
+            'iteration': i,
+            'valid_shots': int(1024 * valid_pct / 100),
+            'invalid_shots': int(1024 * (100 - valid_pct) / 100),
+            'valid_percentage': valid_pct,
+            'best_cost': max(250 - i * 3 + np.random.randn() * 5, 210),
+            'num_unique_bitstrings': int(50 + i * 2 + np.random.randn() * 5),
+            'total_shots': 1024
+        })
+    qaoa_runs['QAOA-Baseline'] = baseline_stats
+    
+    # Run 2: Warm-Start (better validity, faster convergence)
+    ws_stats = []
+    for i in range(15):
+        valid_pct = min(60 + i * 1.5 + np.random.randn() * 3, 85)  # High validity
+        ws_stats.append({
+            'iteration': i,
+            'valid_shots': int(1024 * valid_pct / 100),
+            'invalid_shots': int(1024 * (100 - valid_pct) / 100),
+            'valid_percentage': valid_pct,
+            'best_cost': max(220 - i * 5 + np.random.randn() * 3, 175),
+            'num_unique_bitstrings': int(80 + i * 3 + np.random.randn() * 5),
+            'total_shots': 1024
+        })
+    qaoa_runs['QAOA-Warm-Start'] = ws_stats
+    
+    # Run 3: Pretrained (good validity, moderate convergence)
+    pretrain_stats = []
+    for i in range(15):
+        valid_pct = min(50 + i * 2 + np.random.randn() * 4, 75)  # Moderate validity
+        pretrain_stats.append({
+            'iteration': i,
+            'valid_shots': int(1024 * valid_pct / 100),
+            'invalid_shots': int(1024 * (100 - valid_pct) / 100),
+            'valid_percentage': valid_pct,
+            'best_cost': max(235 - i * 4 + np.random.randn() * 4, 190),
+            'num_unique_bitstrings': int(65 + i * 2.5 + np.random.randn() * 5),
+            'total_shots': 1024
+        })
+    qaoa_runs['QAOA-Pretrained'] = pretrain_stats
+    
+    # Run 4: Combined (best validity and convergence)
+    combined_stats = []
+    for i in range(15):
+        valid_pct = min(70 + i * 1.2 + np.random.randn() * 2, 90)  # Very high validity
+        combined_stats.append({
+            'iteration': i,
+            'valid_shots': int(1024 * valid_pct / 100),
+            'invalid_shots': int(1024 * (100 - valid_pct) / 100),
+            'valid_percentage': valid_pct,
+            'best_cost': max(215 - i * 6 + np.random.randn() * 3, 165),
+            'num_unique_bitstrings': int(90 + i * 3.5 + np.random.randn() * 5),
+            'total_shots': 1024
+        })
+    qaoa_runs['QAOA-WS+Pretrained'] = combined_stats
+    
+    # Example 1: Individual comprehensive progress plots
+    print("\nExample 1: Comprehensive Progress for Each Run")
+    
+    
+    # Plot each run separately
+    figs, axes = plot_qaoa_comprehensive_progress(qaoa_runs)
+    
+    # If multiple figures returned, they're in a list
+    if isinstance(figs, list):
+        print(f"Created {len(figs)} separate comprehensive progress figures")
+    else:
+        print("Created 1 comprehensive progress figure")
+    
+    # Example 2: Side-by-side comparison
+    print("\nExample 2: Side-by-Side Comparison of All Runs")
+    
+    fig_comp, axes_comp = plot_qaoa_comparison(qaoa_runs, figsize=(16, 10))
+    print("Created multi-run comparison figure")
+    
+    # Example 3: Final statistics bar charts
+    print("\nExample 3: Final Statistics Bar Chart Comparison")
+    
+    fig_bars, axes_bars = plot_qaoa_final_comparison_bars(qaoa_runs, figsize=(14, 5))
+    print("Created final statistics bar chart")
+    
+    # Example 4: Compare just two runs
+    print("\nExample 4: Comparing Just Two Specific Runs")
+    two_runs = {
+        'QAOA-Baseline': qaoa_runs['QAOA-Baseline'],
+        'QAOA-WS+Pretrained': qaoa_runs['QAOA-WS+Pretrained']
+    }
+    
+    fig_two, axes_two = plot_qaoa_comparison(two_runs, figsize=(14, 8))
+    print("Created comparison of baseline vs combined approach")
+    
+    print("\n" + "="*70)
+    print("All example visualizations created!")
+    print("Close plots to exit.")
+    print("="*70)
     
     '''
     # example 4: QAOA validity tours

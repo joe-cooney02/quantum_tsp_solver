@@ -1,0 +1,1615 @@
+{
+  "metadata": {
+    "experiment_name": "QAOA_NN_Zero_Init",
+    "problem_name": "4m_10_1",
+    "timestamp": "20260123_095909",
+    "datetime": "2026-01-23T09:59:09.819800",
+    "notes": "Testing zero initialization with NN warm-start"
+  },
+  "hyperparameters": {
+    "layers": 3,
+    "shots": 10000,
+    "qubit_batch_size": 8,
+    "inv_penalty_m": 4.5,
+    "warm_start": "nearest_neighbor",
+    "exploration_strength": 0.0,
+    "initialization_strategy": "zero"
+  },
+  "results": {
+    "algorithms": [
+      "Brute-Force",
+      "Nearest-Neighbor",
+      "Weighted-Nearest-Neighbor",
+      "Simulated-Annealing-1",
+      "Simulated-Annealing-2",
+      "Simulated-Annealing-3",
+      "QAOA-NN-Zero"
+    ],
+    "runtime_data": {
+      "Brute-Force": 2.2290210723876953,
+      "Nearest-Neighbor": 5.793571472167969e-05,
+      "Weighted-Nearest-Neighbor": 0.00014352798461914062,
+      "Simulated-Annealing-1": 0.008863210678100586,
+      "Simulated-Annealing-2": 0.00694584846496582,
+      "Simulated-Annealing-3": 0.01357579231262207,
+      "QAOA-NN-Zero": 141.99881672859192
+    },
+    "travel_time_data": {
+      "Brute-Force": 4261,
+      "Worst-Case": 9441,
+      "Nearest-Neighbor": 4861,
+      "Weighted-Nearest-Neighbor": 4861,
+      "Simulated-Annealing-1": 4635,
+      "Simulated-Annealing-2": 4634,
+      "Simulated-Annealing-3": 4661,
+      "QAOA-NN-Zero": 4861
+    },
+    "tour_graphs": {
+      "Brute-Force": {
+        "nodes": [
+          0,
+          4,
+          6,
+          2,
+          9,
+          7,
+          3,
+          1,
+          5,
+          8
+        ],
+        "edges": [
+          [
+            0,
+            4,
+            {
+              "weight": 135
+            }
+          ],
+          [
+            4,
+            6,
+            {
+              "weight": 380
+            }
+          ],
+          [
+            6,
+            2,
+            {
+              "weight": 299
+            }
+          ],
+          [
+            2,
+            9,
+            {
+              "weight": 725
+            }
+          ],
+          [
+            9,
+            7,
+            {
+              "weight": 538
+            }
+          ],
+          [
+            7,
+            3,
+            {
+              "weight": 236
+            }
+          ],
+          [
+            3,
+            1,
+            {
+              "weight": 342
+            }
+          ],
+          [
+            1,
+            5,
+            {
+              "weight": 488
+            }
+          ],
+          [
+            5,
+            8,
+            {
+              "weight": 591
+            }
+          ],
+          [
+            8,
+            0,
+            {
+              "weight": 527
+            }
+          ]
+        ]
+      },
+      "Nearest-Neighbor": {
+        "nodes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "edges": [
+          [
+            0,
+            4,
+            {
+              "weight": 135
+            }
+          ],
+          [
+            1,
+            9,
+            {
+              "weight": 585
+            }
+          ],
+          [
+            2,
+            5,
+            {
+              "weight": 602
+            }
+          ],
+          [
+            3,
+            7,
+            {
+              "weight": 231
+            }
+          ],
+          [
+            4,
+            6,
+            {
+              "weight": 380
+            }
+          ],
+          [
+            5,
+            3,
+            {
+              "weight": 523
+            }
+          ],
+          [
+            6,
+            2,
+            {
+              "weight": 299
+            }
+          ],
+          [
+            7,
+            1,
+            {
+              "weight": 468
+            }
+          ],
+          [
+            8,
+            0,
+            {
+              "weight": 527
+            }
+          ],
+          [
+            9,
+            8,
+            {
+              "weight": 1111
+            }
+          ]
+        ]
+      },
+      "Weighted-Nearest-Neighbor": {
+        "nodes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "edges": [
+          [
+            0,
+            4,
+            {
+              "weight": 135
+            }
+          ],
+          [
+            1,
+            9,
+            {
+              "weight": 585
+            }
+          ],
+          [
+            2,
+            5,
+            {
+              "weight": 602
+            }
+          ],
+          [
+            3,
+            7,
+            {
+              "weight": 231
+            }
+          ],
+          [
+            4,
+            6,
+            {
+              "weight": 380
+            }
+          ],
+          [
+            5,
+            3,
+            {
+              "weight": 523
+            }
+          ],
+          [
+            6,
+            2,
+            {
+              "weight": 299
+            }
+          ],
+          [
+            7,
+            1,
+            {
+              "weight": 468
+            }
+          ],
+          [
+            8,
+            0,
+            {
+              "weight": 527
+            }
+          ],
+          [
+            9,
+            8,
+            {
+              "weight": 1111
+            }
+          ]
+        ]
+      },
+      "Simulated-Annealing-1": {
+        "nodes": [
+          0,
+          4,
+          6,
+          9,
+          2,
+          7,
+          3,
+          1,
+          5,
+          8
+        ],
+        "edges": [
+          [
+            0,
+            4,
+            {
+              "weight": 135
+            }
+          ],
+          [
+            4,
+            6,
+            {
+              "weight": 380
+            }
+          ],
+          [
+            6,
+            9,
+            {
+              "weight": 593
+            }
+          ],
+          [
+            9,
+            2,
+            {
+              "weight": 709
+            }
+          ],
+          [
+            2,
+            7,
+            {
+              "weight": 634
+            }
+          ],
+          [
+            7,
+            3,
+            {
+              "weight": 236
+            }
+          ],
+          [
+            3,
+            1,
+            {
+              "weight": 342
+            }
+          ],
+          [
+            1,
+            5,
+            {
+              "weight": 488
+            }
+          ],
+          [
+            5,
+            8,
+            {
+              "weight": 591
+            }
+          ],
+          [
+            8,
+            0,
+            {
+              "weight": 527
+            }
+          ]
+        ]
+      },
+      "Simulated-Annealing-2": {
+        "nodes": [
+          0,
+          4,
+          6,
+          2,
+          1,
+          3,
+          7,
+          9,
+          5,
+          8
+        ],
+        "edges": [
+          [
+            0,
+            4,
+            {
+              "weight": 135
+            }
+          ],
+          [
+            4,
+            6,
+            {
+              "weight": 380
+            }
+          ],
+          [
+            6,
+            2,
+            {
+              "weight": 299
+            }
+          ],
+          [
+            2,
+            1,
+            {
+              "weight": 725
+            }
+          ],
+          [
+            1,
+            3,
+            {
+              "weight": 367
+            }
+          ],
+          [
+            3,
+            7,
+            {
+              "weight": 231
+            }
+          ],
+          [
+            7,
+            9,
+            {
+              "weight": 568
+            }
+          ],
+          [
+            9,
+            5,
+            {
+              "weight": 811
+            }
+          ],
+          [
+            5,
+            8,
+            {
+              "weight": 591
+            }
+          ],
+          [
+            8,
+            0,
+            {
+              "weight": 527
+            }
+          ]
+        ]
+      },
+      "Simulated-Annealing-3": {
+        "nodes": [
+          0,
+          4,
+          8,
+          5,
+          3,
+          1,
+          9,
+          7,
+          2,
+          6
+        ],
+        "edges": [
+          [
+            0,
+            4,
+            {
+              "weight": 135
+            }
+          ],
+          [
+            4,
+            8,
+            {
+              "weight": 568
+            }
+          ],
+          [
+            8,
+            5,
+            {
+              "weight": 609
+            }
+          ],
+          [
+            5,
+            3,
+            {
+              "weight": 523
+            }
+          ],
+          [
+            3,
+            1,
+            {
+              "weight": 342
+            }
+          ],
+          [
+            1,
+            9,
+            {
+              "weight": 585
+            }
+          ],
+          [
+            9,
+            7,
+            {
+              "weight": 538
+            }
+          ],
+          [
+            7,
+            2,
+            {
+              "weight": 632
+            }
+          ],
+          [
+            2,
+            6,
+            {
+              "weight": 313
+            }
+          ],
+          [
+            6,
+            0,
+            {
+              "weight": 416
+            }
+          ]
+        ]
+      },
+      "QAOA-NN-Zero": {
+        "nodes": [
+          0,
+          4,
+          6,
+          2,
+          5,
+          3,
+          7,
+          1,
+          9,
+          8
+        ],
+        "edges": [
+          [
+            0,
+            4,
+            {
+              "weight": 135
+            }
+          ],
+          [
+            4,
+            6,
+            {
+              "weight": 380
+            }
+          ],
+          [
+            6,
+            2,
+            {
+              "weight": 299
+            }
+          ],
+          [
+            2,
+            5,
+            {
+              "weight": 602
+            }
+          ],
+          [
+            5,
+            3,
+            {
+              "weight": 523
+            }
+          ],
+          [
+            3,
+            7,
+            {
+              "weight": 231
+            }
+          ],
+          [
+            7,
+            1,
+            {
+              "weight": 468
+            }
+          ],
+          [
+            1,
+            9,
+            {
+              "weight": 585
+            }
+          ],
+          [
+            9,
+            8,
+            {
+              "weight": 1111
+            }
+          ],
+          [
+            8,
+            0,
+            {
+              "weight": 527
+            }
+          ]
+        ]
+      }
+    },
+    "qaoa_progress": {
+      "QAOA-NN-Zero": [
+        {
+          "iteration": 0,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 1,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 2,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 3,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 4,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 5,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 6,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 7,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 6057
+        },
+        {
+          "iteration": 8,
+          "total_shots": 10000,
+          "valid_shots": 144.0,
+          "invalid_shots": 9856.0,
+          "valid_percentage": 1.44,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 9111
+        },
+        {
+          "iteration": 9,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 10,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 11,
+          "total_shots": 10000,
+          "valid_shots": 4311.0,
+          "invalid_shots": 5689.0,
+          "valid_percentage": 43.11,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1877
+        },
+        {
+          "iteration": 12,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 13,
+          "total_shots": 10000,
+          "valid_shots": 6468.0,
+          "invalid_shots": 3532.0,
+          "valid_percentage": 64.68,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 735
+        },
+        {
+          "iteration": 14,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 15,
+          "total_shots": 10000,
+          "valid_shots": 9416.0,
+          "invalid_shots": 584.0,
+          "valid_percentage": 94.16,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 102
+        },
+        {
+          "iteration": 16,
+          "total_shots": 10000,
+          "valid_shots": 759.0,
+          "invalid_shots": 9241.0,
+          "valid_percentage": 7.59,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 6605
+        },
+        {
+          "iteration": 17,
+          "total_shots": 10000,
+          "valid_shots": 6927.0,
+          "invalid_shots": 3073.0,
+          "valid_percentage": 69.27,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 595
+        },
+        {
+          "iteration": 18,
+          "total_shots": 10000,
+          "valid_shots": 8522.0,
+          "invalid_shots": 1478.0,
+          "valid_percentage": 85.22,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 184
+        },
+        {
+          "iteration": 19,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 20,
+          "total_shots": 10000,
+          "valid_shots": 9982.0,
+          "invalid_shots": 18.0,
+          "valid_percentage": 99.82,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 13
+        },
+        {
+          "iteration": 21,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 22,
+          "total_shots": 10000,
+          "valid_shots": 9786.0,
+          "invalid_shots": 214.0,
+          "valid_percentage": 97.86,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 71
+        },
+        {
+          "iteration": 23,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 24,
+          "total_shots": 10000,
+          "valid_shots": 9749.0,
+          "invalid_shots": 251.0,
+          "valid_percentage": 97.49,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 82
+        },
+        {
+          "iteration": 25,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 26,
+          "total_shots": 10000,
+          "valid_shots": 9773.0,
+          "invalid_shots": 227.0,
+          "valid_percentage": 97.72999999999999,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 77
+        },
+        {
+          "iteration": 27,
+          "total_shots": 10000,
+          "valid_shots": 9939.0,
+          "invalid_shots": 61.0,
+          "valid_percentage": 99.39,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 31
+        },
+        {
+          "iteration": 28,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 29,
+          "total_shots": 10000,
+          "valid_shots": 9987.0,
+          "invalid_shots": 13.0,
+          "valid_percentage": 99.87,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 9
+        },
+        {
+          "iteration": 30,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 31,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 32,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 33,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 34,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 35,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 36,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 37,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 38,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 39,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        },
+        {
+          "iteration": 40,
+          "total_shots": 10000,
+          "valid_shots": 10000.0,
+          "invalid_shots": 0.0,
+          "valid_percentage": 100.0,
+          "best_cost": 4861,
+          "best_bitstring": "000100000000000001000010000000000100000001000000100000001000000010000000100000000000000001",
+          "best_tour": [
+            0,
+            4,
+            6,
+            2,
+            5,
+            3,
+            7,
+            1,
+            9,
+            8,
+            0
+          ],
+          "num_unique_bitstrings": 1
+        }
+      ]
+    },
+    "num_valid_tours": 362880,
+    "example_valid_tours": [
+      [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        0
+      ],
+      [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        8,
+        0
+      ],
+      [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        8,
+        7,
+        9,
+        0
+      ],
+      [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        8,
+        9,
+        7,
+        0
+      ],
+      [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        9,
+        7,
+        8,
+        0
+      ]
+    ],
+    "brute_force_statistics": {
+      "num_tours": 362880,
+      "min": 4261.0,
+      "max": 9441.0,
+      "mean": 6938.666666666667,
+      "median": 6943.0,
+      "std": 702.031219628681
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "travel_times": {
+    "QAOA-WS-nearest_neighbor": 4861,
+    "QAOA-WS-farthest_insertion": 4432,
+    "QAOA-WS-cheapest_insertion": 4261,
+    "QAOA-WS-random_nearest_neighbor": 0,
+    "QAOA-WS-random": 0,
+    "QAOA-Pretrained-L0": 0,
+    "QAOA-Combined": 4861,
+    "QAOA-Baseline": 0
+  },
+  "runtimes": {
+    "QAOA-WS-nearest_neighbor": 170.9302933216095,
+    "QAOA-WS-farthest_insertion": 185.86831641197205,
+    "QAOA-WS-cheapest_insertion": 187.27841210365295,
+    "QAOA-WS-random_nearest_neighbor": 195.86984634399414,
+    "QAOA-WS-random": 193.12186336517334,
+    "QAOA-Pretrained-L0": 141.07331824302673,
+    "QAOA-Combined": 171.51514053344727,
+    "QAOA-Baseline": 148.40296864509583
+  },
+  "final_validity_rates": {
+    "QAOA-WS-nearest_neighbor": 40.239999999999995,
+    "QAOA-WS-farthest_insertion": 41.29,
+    "QAOA-WS-cheapest_insertion": 40.42,
+    "QAOA-WS-random_nearest_neighbor": 0.0,
+    "QAOA-WS-random": 0.0,
+    "QAOA-Pretrained-L0": 0.0,
+    "QAOA-Combined": 79.60000000000001,
+    "QAOA-Baseline": 0.0
+  }
+}

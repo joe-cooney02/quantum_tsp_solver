@@ -1,1 +1,1 @@
-{"Brute-Force": [0, 4, 6, 2, 9, 7, 3, 1, 5, 8, 0], "Nearest-Neighbor": [0, 4, 6, 2, 5, 3, 7, 1, 9, 8, 0], "Weighted-Nearest-Neighbor": [0, 4, 6, 2, 5, 3, 7, 1, 9, 8, 0], "Simulated-Annealing-1": [0, 4, 6, 2, 5, 3, 7, 1, 9, 8, 0], "Simulated-Annealing-2": [0, 4, 6, 2, 1, 9, 3, 7, 5, 8, 0], "Simulated-Annealing-3": [0, 4, 8, 5, 3, 1, 7, 9, 2, 6, 0], "QAOA-NN-Zero": [0, 4, 6, 2, 5, 3, 7, 1, 9, 8, 0]}
+{"Brute-Force": [0, 4, 6, 2, 9, 7, 3, 1, 5, 8, 0], "QAOA-Pretrained-L3-2Q": []}

@@ -1,0 +1,559 @@
+{
+  "metadata": {
+    "experiment_name": "QAOA_Multi_Run_Comparison",
+    "problem_name": "4m_10_1",
+    "timestamp": "20260129_085544",
+    "datetime": "2026-01-29T08:55:44.533993",
+    "notes": "Comparing multiple QAOA configurations with different warm-starts and pretraining"
+  },
+  "hyperparameters": {
+    "layers": 5,
+    "shots": 10000,
+    "qubit_batch_size": 8,
+    "inv_penalty_m": 4.5,
+    "warm_start": "ALL",
+    "exploration_strength": 0.1,
+    "initialization_strategy": "zero"
+  },
+  "results": {
+    "algorithms": [
+      "Brute-Force",
+      "QAOA-Pretrained-L3-2Q"
+    ],
+    "runtime_data": {
+      "Brute-Force": 2.007969856262207,
+      "QAOA-Pretrained-L3-2Q": 392.05755043029785
+    },
+    "travel_time_data": {
+      "Brute-Force": 4261,
+      "Worst-Case": 9441,
+      "QAOA-Pretrained-L3-2Q": 0
+    },
+    "tour_graphs": {
+      "Brute-Force": {
+        "nodes": [
+          0,
+          4,
+          6,
+          2,
+          9,
+          7,
+          3,
+          1,
+          5,
+          8
+        ],
+        "edges": [
+          [
+            0,
+            4,
+            {
+              "weight": 135
+            }
+          ],
+          [
+            4,
+            6,
+            {
+              "weight": 380
+            }
+          ],
+          [
+            6,
+            2,
+            {
+              "weight": 299
+            }
+          ],
+          [
+            2,
+            9,
+            {
+              "weight": 725
+            }
+          ],
+          [
+            9,
+            7,
+            {
+              "weight": 538
+            }
+          ],
+          [
+            7,
+            3,
+            {
+              "weight": 236
+            }
+          ],
+          [
+            3,
+            1,
+            {
+              "weight": 342
+            }
+          ],
+          [
+            1,
+            5,
+            {
+              "weight": 488
+            }
+          ],
+          [
+            5,
+            8,
+            {
+              "weight": 591
+            }
+          ],
+          [
+            8,
+            0,
+            {
+              "weight": 527
+            }
+          ]
+        ]
+      },
+      "QAOA-Pretrained-L3-2Q": {
+        "nodes": [],
+        "edges": []
+      }
+    },
+    "qaoa_progress": {
+      "QAOA-Pretrained-L3-2Q": [
+        {
+          "iteration": 0,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 1,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 2,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 3,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 4,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 5,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 6,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 7,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 8,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 9,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 10,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 11,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 12,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 13,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 14,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 15,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 16,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 17,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 18,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 19,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 20,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 21,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 22,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 23,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 24,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 25,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 26,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 27,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 28,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 29,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        },
+        {
+          "iteration": 30,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 10000
+        }
+      ]
+    },
+    "qaoa_summary": {
+      "QAOA-Pretrained-L3-2Q": {
+        "num_iterations": 31,
+        "final_validity_pct": 0.0,
+        "final_best_cost": Infinity,
+        "initial_cost": Infinity,
+        "improvement_pct": NaN,
+        "avg_validity_pct": 0.0,
+        "avg_diversity": 10000.0,
+        "max_validity_pct": 0.0,
+        "min_cost": Infinity
+      }
+    },
+    "num_valid_tours": 362880,
+    "example_valid_tours": [
+      [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        0
+      ],
+      [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        8,
+        0
+      ],
+      [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        8,
+        7,
+        9,
+        0
+      ],
+      [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        8,
+        9,
+        7,
+        0
+      ],
+      [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        9,
+        7,
+        8,
+        0
+      ]
+    ],
+    "brute_force_statistics": {
+      "num_tours": 362880,
+      "min": 4261.0,
+      "max": 9441.0,
+      "mean": 6938.666666666667,
+      "median": 6943.0,
+      "std": 702.031219628681
+    }
+  }
+}

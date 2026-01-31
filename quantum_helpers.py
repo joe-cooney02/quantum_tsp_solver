@@ -65,9 +65,10 @@ def create_edge_to_qubit_map(G):
     return edge_to_qubit_map
 
 
-def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False, warm_start_tour=None, exploration_strength=0.2):
+def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False, warm_start_tour=None, 
+                           exploration_strength=0.2, use_local_2q_gates=False, batch_size=8):
     """
-    Create a QAOA circuit for TSP using only single-qubit gates.
+    Create a QAOA circuit for TSP.
     
     Parameters:
     -----------
@@ -80,12 +81,21 @@ def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False, 
         Number of QAOA layers (p parameter)
     
     barriers: bool, optional
-        Wether to add barriers to the circuit. 
+        Whether to add barriers to the circuit. 
         Do not add barriers if you want to split the circuit.
         
     warm_start_tour : list, optional
         Initial tour to warm-start from (e.g., from greedy algorithm)
         If provided, initializes circuit in this solution instead of equal superposition
+    
+    use_local_2q_gates : bool, optional
+        If True, add local 2-qubit gates (CZ) within batches for entanglement.
+        These gates only connect qubits within the same batch, maintaining
+        compatibility with batched simulation.
+    
+    batch_size : int, optional
+        Size of batches for simulation. Only relevant if use_local_2q_gates=True.
+        2-qubit gates will only connect qubits within the same batch.
     
     Returns:
     --------
@@ -134,6 +144,27 @@ def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False, 
                 # RZ gate for cost function
                 qc.rz(2 * gamma_params[layer] * weight, qubit_idx)
         
+        # Optional: Add local 2-qubit entangling gates within batches
+        if use_local_2q_gates:
+            # Add CZ gates between adjacent qubits within each batch
+            num_batches = (num_qubits + batch_size - 1) // batch_size
+            
+            for batch_idx in range(num_batches):
+                # Determine qubit range for this batch
+                start_qubit = batch_idx * batch_size
+                end_qubit = min(start_qubit + batch_size, num_qubits)
+                
+                # Add CZ gates between adjacent qubits in this batch
+                # Pattern: 0-1, 2-3, 4-5, ... (even pairs first)
+                for i in range(start_qubit, end_qubit - 1, 2):
+                    if i + 1 < end_qubit:
+                        qc.cz(i, i + 1)
+                
+                # Then: 1-2, 3-4, 5-6, ... (odd pairs)
+                for i in range(start_qubit + 1, end_qubit - 1, 2):
+                    if i + 1 < end_qubit:
+                        qc.cz(i, i + 1)
+        
         if barriers:
             qc.barrier()
         
@@ -153,7 +184,8 @@ def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False, 
 
 
 def create_warm_started_qaoa(G, qubit_to_edge_map, num_layers=1, 
-                             warm_start_method=None, exploration_strength=0):
+                             warm_start_method=None, exploration_strength=0,
+                             use_local_2q_gates=False, batch_size=8):
     """
     Create a warm-started QAOA circuit with configurable exploration.
     
@@ -170,6 +202,10 @@ def create_warm_started_qaoa(G, qubit_to_edge_map, num_layers=1,
     exploration_strength : float, optional
         How much to perturb the initial state (0 = pure warm-start, larger = more exploration)
         Typical range: 0.1 to 0.5
+    use_local_2q_gates : bool, optional
+        If True, add local 2-qubit gates within batches
+    batch_size : int, optional
+        Batch size for 2-qubit gate locality
     
     Returns:
     --------
@@ -177,7 +213,8 @@ def create_warm_started_qaoa(G, qubit_to_edge_map, num_layers=1,
     """
     if warm_start_method is None:
         return create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers, warm_start_tour=None, 
-                                       exploration_strength=exploration_strength)
+                                       exploration_strength=exploration_strength,
+                                       use_local_2q_gates=use_local_2q_gates, batch_size=batch_size)
     
     # if tour is provided:
     if warm_start_method is list():
@@ -189,74 +226,153 @@ def create_warm_started_qaoa(G, qubit_to_edge_map, num_layers=1,
     
     # Create circuit with warm-start
     circuit = create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers, warm_start_tour=tour, 
-                                      exploration_strength=exploration_strength)
+                                      exploration_strength=exploration_strength,
+                                      use_local_2q_gates=use_local_2q_gates, batch_size=batch_size)
     
     return circuit
 
 
 def split_circuit_for_simulation(circuit, max_qubits_per_batch=10):
     """
-    Split a large single-qubit-only circuit into smaller sub-circuits for simulation.
+    Split a circuit into smaller sub-circuits for simulation.
     
-    This works because circuits with only single-qubit gates can be simulated 
-    independently for each qubit, then the results combined.
+    This function intelligently handles circuits with local 2-qubit gates by:
+    1. Detecting which qubits are entangled via 2-qubit gates
+    2. Ensuring entangled qubits stay in the same batch
+    3. Splitting only at boundaries where no entanglement crosses
+    
+    For circuits with only single-qubit gates, splits freely every max_qubits_per_batch.
+    For circuits with local 2-qubit gates (within batches), splits at batch boundaries.
     
     Parameters:
     -----------
     circuit : QuantumCircuit
-        The circuit to split (must contain only single-qubit gates)
+        The circuit to split
     max_qubits_per_batch : int, optional
-        Maximum number of qubits per sub-circuit
+        Maximum number of qubits per sub-circuit (used as batch size for 2Q gates)
     
     Returns:
     --------
     list: List of tuples (sub_circuit, qubit_indices)
           where sub_circuit is a QuantumCircuit and qubit_indices is the list
           of original qubit indices it corresponds to
-    """
-    num_qubits = circuit.num_qubits
     
-    # Check if circuit has 2-qubit gates (shouldn't for our QAOA)
+    Raises:
+    -------
+    ValueError: If circuit has 2-qubit gates that cross expected batch boundaries
+    """
+    
+    # First, detect if circuit has any 2-qubit gates
+    has_2q_gates = False
+    two_qubit_connections = set()  # Set of (qubit_i, qubit_j) pairs
+    
     for instruction in circuit.data:
         if len(instruction.qubits) > 1:
-            raise ValueError(f"Circuit contains multi-qubit gate: {instruction.operation.name}. "
-                           "Can only split circuits with single-qubit gates.")
+            has_2q_gates = True
+            # Get qubit indices
+            qubit_indices = [circuit.qubits.index(q) for q in instruction.qubits]
+            # Store as sorted tuple to avoid duplicates
+            two_qubit_connections.add(tuple(sorted(qubit_indices)))
     
-    # Calculate number of batches needed
+    if not has_2q_gates:
+        # Simple case: no 2Q gates, split freely
+        return _split_circuit_simple(circuit, max_qubits_per_batch)
+    
+    # Complex case: has 2Q gates, need to respect entanglement boundaries
+    return _split_circuit_with_2q_gates(circuit, max_qubits_per_batch, two_qubit_connections)
+
+
+def _split_circuit_simple(circuit, max_qubits_per_batch):
+    """
+    Helper function: Split circuit with only single-qubit gates.
+    
+    This is the original splitting logic - works for any single-qubit-only circuit.
+    """
+    num_qubits = circuit.num_qubits
     num_batches = (num_qubits + max_qubits_per_batch - 1) // max_qubits_per_batch
     
     sub_circuits = []
     
     for batch_idx in range(num_batches):
-        # Determine which qubits go in this batch
         start_qubit = batch_idx * max_qubits_per_batch
         end_qubit = min(start_qubit + max_qubits_per_batch, num_qubits)
         batch_qubit_indices = list(range(start_qubit, end_qubit))
         
-        # Create new sub-circuit
         sub_qc = QuantumCircuit(len(batch_qubit_indices))
-        
-        # Map original qubit indices to sub-circuit indices
         qubit_map = {orig_idx: new_idx for new_idx, orig_idx in enumerate(batch_qubit_indices)}
         
-        # Copy operations for these qubits
         for instruction in circuit.data:
             qubit = instruction.qubits[0]
             qubit_idx = circuit.qubits.index(qubit)
             
-            # Only add if this qubit is in our batch
             if qubit_idx in batch_qubit_indices:
                 new_qubit_idx = qubit_map[qubit_idx]
                 operation = instruction.operation
                 
-                # Add the operation to the sub-circuit
                 if operation.name == 'measure':
                     sub_qc.measure_all()
-                    break  # Don't add more after measure_all
+                    break
                 elif operation.name == 'barrier':
                     sub_qc.barrier()
                 else:
                     sub_qc.append(operation, [new_qubit_idx])
+        
+        sub_circuits.append((sub_qc, batch_qubit_indices))
+    
+    return sub_circuits
+
+
+def _split_circuit_with_2q_gates(circuit, batch_size, two_qubit_connections):
+    """
+    Helper function: Split circuit with local 2-qubit gates.
+    
+    Assumes 2Q gates only connect qubits within the same batch of size `batch_size`.
+    Verifies this assumption and raises error if violated.
+    """
+    num_qubits = circuit.num_qubits
+    
+    # Verify all 2Q gates are within batch boundaries
+    for q1, q2 in two_qubit_connections:
+        batch1 = q1 // batch_size
+        batch2 = q2 // batch_size
+        
+        if batch1 != batch2:
+            raise ValueError(
+                f"Circuit has 2-qubit gate between qubits {q1} and {q2}, "
+                f"which are in different batches (batch {batch1} and {batch2}). "
+                f"Cannot split this circuit safely. "
+                f"Batch size is {batch_size}, so qubits {batch1*batch_size}-{(batch1+1)*batch_size-1} "
+                f"and {batch2*batch_size}-{(batch2+1)*batch_size-1} are in separate batches."
+            )
+    
+    # If we get here, all 2Q gates are within batches, so we can split at batch boundaries
+    num_batches = (num_qubits + batch_size - 1) // batch_size
+    sub_circuits = []
+    
+    for batch_idx in range(num_batches):
+        start_qubit = batch_idx * batch_size
+        end_qubit = min(start_qubit + batch_size, num_qubits)
+        batch_qubit_indices = list(range(start_qubit, end_qubit))
+        
+        sub_qc = QuantumCircuit(len(batch_qubit_indices))
+        qubit_map = {orig_idx: new_idx for new_idx, orig_idx in enumerate(batch_qubit_indices)}
+        
+        for instruction in circuit.data:
+            qubits_involved = [circuit.qubits.index(q) for q in instruction.qubits]
+            
+            # Check if all qubits in this instruction are in our batch
+            if all(q_idx in batch_qubit_indices for q_idx in qubits_involved):
+                operation = instruction.operation
+                
+                if operation.name == 'measure':
+                    sub_qc.measure_all()
+                    break
+                elif operation.name == 'barrier':
+                    sub_qc.barrier()
+                else:
+                    # Map to new qubit indices
+                    new_qubit_indices = [qubit_map[q_idx] for q_idx in qubits_involved]
+                    sub_qc.append(operation, new_qubit_indices)
         
         sub_circuits.append((sub_qc, batch_qubit_indices))
     
@@ -715,36 +831,127 @@ def postselect_best_tour(bitstrings, counts, qubit_to_edge_map, G):
                 best_cost = cost
                 best_bitstring = bitstring
                 best_tour = tour
+                
     
     success_rate = valid_shots / total_shots if total_shots > 0 else 0
     
     return best_bitstring, best_tour, best_cost, success_rate
 
 
-def get_cost_expectation(bitstrings, counts, qubit_to_edge_map, G, inv_penalty=0):
+def compute_soft_validity_score(bitstring, qubit_to_edge_map, graph, fast=True):
+    """
+    Compute a soft validity score measuring how close a bitstring is to being valid.
+    
+    Returns a violation score where:
+    - 0.0 = perfectly valid tour
+    - Higher values = more violations
+    
+    This provides a gradient toward validity, avoiding barren plateaus.
+    
+    Parameters:
+    -----------
+    bitstring : str
+        Binary string representing edge selections
+    qubit_to_edge_map : dict
+        Mapping from qubit index to edge tuple
+    graph : networkx.DiGraph
+        The TSP graph
+    fast : bool, optional
+        If True, skip disconnection check (faster). Default True.
+    
+    Returns:
+    --------
+    float: Violation score (0.0 = valid, higher = more invalid)
+    """
+    # Convert bitstring if needed
+    if isinstance(bitstring, str):
+        bits = [int(b) for b in bitstring]
+    else:
+        bits = list(bitstring)
+    
+    # Get selected edges
+    selected_edges = []
+    for qubit_idx, bit in enumerate(bits):
+        if bit == 1 and qubit_idx in qubit_to_edge_map:
+            selected_edges.append(qubit_to_edge_map[qubit_idx])
+    
+    num_nodes = graph.number_of_nodes()
+    
+    # Violation 1: Wrong number of edges
+    # Should have exactly N edges for N nodes
+    edge_count_violation = abs(len(selected_edges) - num_nodes)
+    
+    # Violation 2: Degree violations
+    # Each node should have in-degree = 1 and out-degree = 1
+    in_degrees = {node: 0 for node in graph.nodes()}
+    out_degrees = {node: 0 for node in graph.nodes()}
+    
+    for u, v in selected_edges:
+        if u in out_degrees:  # Safety check
+            out_degrees[u] += 1
+        if v in in_degrees:  # Safety check
+            in_degrees[v] += 1
+    
+    degree_violations = sum(
+        abs(in_degrees[node] - 1) + abs(out_degrees[node] - 1)
+        for node in graph.nodes()
+    )
+    
+    # Violation 3: Disconnection penalty (optional, expensive)
+    disconnection_penalty = 0
+    if not fast and edge_count_violation == 0 and degree_violations == 0:
+        # Only check if we have right structure
+        tour_graph = nx.DiGraph()
+        tour_graph.add_edges_from(selected_edges)
+        
+        # Count strongly connected components
+        num_components = len(list(nx.strongly_connected_components(tour_graph)))
+        disconnection_penalty = num_components - 1  # Should be 1 component
+    
+    # Weighted combination
+    # Edge count is most important (need right number)
+    # Degree violations next (need right structure)
+    # Disconnection last (only matters if structure is right)
+    total_violation = (
+        edge_count_violation * 1.0 +
+        degree_violations * 0.5 +
+        disconnection_penalty * 2.0
+    )
+    
+    return total_violation
+
+
+def get_cost_expectation(bitstrings, counts, qubit_to_edge_map, G, inv_penalty=0, 
+                        use_soft_validity=False, soft_validity_penalty_base=10.0):
     """
     get expectation of cost value from QAOA results.
         
     Parameters:
     -----------
     bitstrings : list
-    List of unique bitstrings from QAOA measurements
+        List of unique bitstrings from QAOA measurements
     counts : list or dict
-    Counts/frequencies for each bitstring (same order as bitstrings)
-    Can be a list of counts or dict mapping bitstring to count
+        Counts/frequencies for each bitstring (same order as bitstrings)
+        Can be a list of counts or dict mapping bitstring to count
     qubit_to_edge_map : dict
-    Mapping from qubit index to edge tuple
+        Mapping from qubit index to edge tuple
     G : networkx.DiGraph
-    The graph representing the TSP problem
-    inv_penalty: float
-    penalty term for invalid solution bitstrings.
-    If this is negative, this will be |inv_penalty| * (max edge weight of G)
-    Default: 0.
+        The graph representing the TSP problem
+    inv_penalty : float
+        Penalty term for invalid solution bitstrings.
+        If negative, will be |inv_penalty| * (max edge weight)
+        Only used if use_soft_validity=False. Default: 0.
+    use_soft_validity : bool
+        If True, use soft validity penalties (gradient toward validity).
+        If False, use hard penalty (flat landscape). Default: False.
+    soft_validity_penalty_base : float
+        Base multiplier for soft validity penalties. Only used if use_soft_validity=True.
+        Penalty = base * max_edge_weight * (1 + violation_score). Default: 10.0.
     
     Returns:
     --------
     float: cost_expectation
-    the expectation value to use in optimization loop.
+        The expectation value to use in optimization loop.
     """
     # Convert counts to dict if needed
     if isinstance(counts, list):
@@ -752,15 +959,17 @@ def get_cost_expectation(bitstrings, counts, qubit_to_edge_map, G, inv_penalty=0
     else:
         counts_dict = counts
         
-    # print(counts_dict)
-        
     total_shots = sum(counts_dict.values())
     total_cost = 0
+    num_nodes = G.number_of_nodes()
     
-    # get penalty term
-    if inv_penalty < 0:    
-        edge_weights = [data['weight'] for u, v, data in G.edges(data=True)]
-        inv_penalty = abs(inv_penalty) * max(edge_weights)
+    # Get max edge weight for scaling
+    edge_weights = [data['weight'] for u, v, data in G.edges(data=True)]
+    max_edge_weight = max(edge_weights)
+    
+    # Get penalty term for hard penalty mode
+    if inv_penalty < 0:
+        inv_penalty = abs(inv_penalty) * max_edge_weight
     
     # iterate through bitstrings
     for bitstring in bitstrings:
@@ -773,12 +982,18 @@ def get_cost_expectation(bitstrings, counts, qubit_to_edge_map, G, inv_penalty=0
                 u, v = tour[i], tour[i+1]
                 if G.has_edge(u, v):
                     cost += G[u][v]['weight']
-                    
-            total_cost += cost * counts_dict[bitstring]
-            
         else:
-            # apply penalty
-            total_cost += inv_penalty * counts_dict[bitstring]
+            # Invalid tour - apply penalty
+            if use_soft_validity:
+                # Soft penalty: scales with violation severity
+                violation_score = compute_soft_validity_score(bitstring, qubit_to_edge_map, G, fast=True)
+                cost = soft_validity_penalty_base * max_edge_weight * (1.0 + violation_score)
+            else:
+                # Hard penalty: fixed penalty with simple Hamming distance
+                doi = abs(bitstring.count('1') - num_nodes)
+                cost = inv_penalty * doi if doi > 0 else inv_penalty
+                    
+        total_cost += cost * counts_dict[bitstring]
             
     cost_expectation = total_cost / total_shots
     

@@ -1,1 +1,1 @@
-{"Brute-Force": 1.8732097148895264, "Nearest-Neighbor": 5.9604644775390625e-05, "Weighted-Nearest-Neighbor": 0.00014519691467285156, "Simulated-Annealing-1": 0.006064176559448242, "Simulated-Annealing-2": 0.010597705841064453, "Simulated-Annealing-3": 0.008485078811645508, "QAOA-NN-Zero": 75.42830514907837}
+{"Brute-Force": 1.827056884765625, "QAOA-Pretrained-L3-2Q": 560.2574911117554}

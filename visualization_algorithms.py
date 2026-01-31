@@ -1147,7 +1147,6 @@ def plot_qaoa_cost_convergence(qaoa_stats_list, figsize=(10, 6),
 
 
 def plot_qaoa_comprehensive_progress(labelled_qaoa_stats, figsize=(14, 10)):
-    # TODO: get claude to add legends in all subplots and make it so titled by label.
     """
     Create a comprehensive multi-panel visualization of QAOA progress.
     
@@ -1155,18 +1154,22 @@ def plot_qaoa_comprehensive_progress(labelled_qaoa_stats, figsize=(14, 10)):
     
     Parameters:
     -----------
-    labelled_qaoa_stats : dict: title, list of dict
-        List of statistics dictionaries from get_qaoa_statistics,labelled by run
+    labelled_qaoa_stats : dict
+        Dictionary mapping run labels to lists of statistics dictionaries
+        e.g., {'QAOA-Baseline': [...], 'QAOA-WS': [...]}
     figsize : tuple, optional
         Figure size as (width, height)
     
     Returns:
     --------
-    fig, axes : matplotlib figure and axes objects
+    fig, axes : matplotlib figure and axes objects (one set per run)
     """
     if not labelled_qaoa_stats:
         print("No data to plot!")
         return None, None
+    
+    all_figs = []
+    all_axes = []
     
     for title, qaoa_stats_list in labelled_qaoa_stats.items():
     
@@ -1182,52 +1185,284 @@ def plot_qaoa_comprehensive_progress(labelled_qaoa_stats, figsize=(14, 10)):
         
         # Panel 1: Best Cost over time
         ax1 = fig.add_subplot(gs[0, :])
-        ax1.plot(iterations, best_costs, 'o-', linewidth=2.5, markersize=8, color='#1f77b4')
+        ax1.plot(iterations, best_costs, 'o-', linewidth=2.5, markersize=8, color='#1f77b4', label=title)
         
         # Mark improvements
+        improvement_count = 0
         for i in range(1, len(best_costs)):
             if best_costs[i] is not None and best_costs[i-1] is not None:
                 if best_costs[i] < best_costs[i-1]:
-                    ax1.plot(iterations[i], best_costs[i], '*', markersize=20, 
-                            color='gold', markeredgecolor='darkorange', markeredgewidth=2, zorder=5)
+                    if improvement_count == 0:
+                        ax1.plot(iterations[i], best_costs[i], '*', markersize=20, 
+                                color='gold', markeredgecolor='darkorange', markeredgewidth=2, 
+                                zorder=5, label='Improvement')
+                        improvement_count += 1
+                    else:
+                        ax1.plot(iterations[i], best_costs[i], '*', markersize=20, 
+                                color='gold', markeredgecolor='darkorange', markeredgewidth=2, zorder=5)
         
-        ax1.set_ylabel('Best Tour Cost', fontsize=11, fontweight='bold')
-        ax1.set_title('QAOA Convergence', fontsize=13, fontweight='bold')
+        ax1.set_ylabel('Best Tour Cost (seconds)', fontsize=11, fontweight='bold')
+        ax1.set_title('QAOA Cost Convergence', fontsize=13, fontweight='bold')
         ax1.grid(True, alpha=0.3)
+        ax1.legend(loc='upper right', fontsize=10)
         
         # Panel 2: Validity percentage
         ax2 = fig.add_subplot(gs[1, 0])
-        ax2.plot(iterations, valid_pcts, 'o-', linewidth=2, markersize=6, color='#2ca02c')
+        ax2.plot(iterations, valid_pcts, 'o-', linewidth=2, markersize=6, color='#2ca02c', label=title)
         ax2.fill_between(iterations, 0, valid_pcts, alpha=0.3, color='#2ca02c')
-        ax2.set_xlabel('Iteration', fontsize=11)
+        avg_validity = np.mean(valid_pcts)
+        ax2.axhline(avg_validity, color='red', linestyle='--', alpha=0.5, linewidth=2, 
+                   label=f'Avg: {avg_validity:.1f}%')
+        ax2.set_xlabel('Iteration', fontsize=11, fontweight='bold')
         ax2.set_ylabel('Valid Tour %', fontsize=11, fontweight='bold')
-        ax2.set_title('Solution Validity', fontsize=12, fontweight='bold')
+        ax2.set_title('Solution Validity Over Time', fontsize=12, fontweight='bold')
         ax2.set_ylim(0, max(105, max(valid_pcts) * 1.1))
         ax2.grid(True, alpha=0.3)
-        ax2.axhline(np.average(valid_pcts), color='red', linestyle='--', alpha=0.5, linewidth=1)
+        ax2.legend(loc='lower right', fontsize=9)
         
         # Panel 3: Unique bitstrings (diversity)
         ax3 = fig.add_subplot(gs[1, 1])
-        ax3.plot(iterations, unique_bs, 'o-', linewidth=2, markersize=6, color='#ff7f0e')
-        ax3.set_xlabel('Iteration', fontsize=11)
+        ax3.plot(iterations, unique_bs, 'o-', linewidth=2, markersize=6, color='#ff7f0e', label=title)
+        avg_diversity = np.mean(unique_bs)
+        ax3.axhline(avg_diversity, color='purple', linestyle='--', alpha=0.5, linewidth=2,
+                   label=f'Avg: {avg_diversity:.0f}')
+        ax3.set_xlabel('Iteration', fontsize=11, fontweight='bold')
         ax3.set_ylabel('Unique Bitstrings', fontsize=11, fontweight='bold')
         ax3.set_title('Solution Diversity', fontsize=12, fontweight='bold')
         ax3.grid(True, alpha=0.3)
+        ax3.legend(loc='upper right', fontsize=9)
         
         # Panel 4: Valid vs Invalid stacked area
         ax4 = fig.add_subplot(gs[2, :])
         total_shots = [v + i for v, i in zip(valid_shots, invalid_shots)]
-        ax4.fill_between(iterations, 0, valid_shots, alpha=0.7, color='#2ca02c', label='Valid')
-        ax4.fill_between(iterations, valid_shots, total_shots, alpha=0.7, color='#d62728', label='Invalid')
+        ax4.fill_between(iterations, 0, valid_shots, alpha=0.7, color='#2ca02c', label='Valid Tours')
+        ax4.fill_between(iterations, valid_shots, total_shots, alpha=0.7, color='#d62728', label='Invalid Tours')
         ax4.set_xlabel('Iteration', fontsize=11, fontweight='bold')
         ax4.set_ylabel('Number of Shots', fontsize=11, fontweight='bold')
-        ax4.set_title('Valid vs Invalid Tours', fontsize=12, fontweight='bold')
-        ax4.legend(loc='upper right')
+        ax4.set_title('Valid vs Invalid Tours Distribution', fontsize=12, fontweight='bold')
+        ax4.legend(loc='upper right', fontsize=10)
         ax4.grid(True, alpha=0.3, axis='y')
         
         plt.suptitle(f'QAOA Optimization Progress: {title}', fontsize=15, fontweight='bold', y=0.995)
         
-        return fig, (ax1, ax2, ax3, ax4)
+        all_figs.append(fig)
+        all_axes.append((ax1, ax2, ax3, ax4))
+    
+    # Return single figure if only one run, otherwise return lists
+    if len(all_figs) == 1:
+        return all_figs[0], all_axes[0]
+    return all_figs, all_axes
+
+
+def plot_qaoa_comparison(labelled_qaoa_stats, figsize=(16, 10)):
+    """
+    Create a side-by-side comparison of multiple QAOA runs.
+    
+    Shows all runs on the same plots for direct comparison of convergence,
+    validity, and diversity.
+    
+    Parameters:
+    -----------
+    labelled_qaoa_stats : dict
+        Dictionary mapping run labels to lists of statistics dictionaries
+        e.g., {'QAOA-Baseline': [...], 'QAOA-WS': [...], 'QAOA-Pretrained': [...]}
+    figsize : tuple, optional
+        Figure size as (width, height)
+    
+    Returns:
+    --------
+    fig, axes : matplotlib figure and axes objects
+    """
+    if not labelled_qaoa_stats:
+        print("No data to plot!")
+        return None, None
+    
+    # Set up color palette
+    colors = plt.cm.tab10(np.linspace(0, 1, len(labelled_qaoa_stats)))
+    
+    fig, axes = plt.subplots(2, 2, figsize=figsize)
+    ax1, ax2, ax3, ax4 = axes.flatten()
+    
+    # Track data for summary statistics
+    all_final_validities = {}
+    all_final_costs = {}
+    all_avg_diversities = {}
+    
+    for idx, (label, qaoa_stats_list) in enumerate(labelled_qaoa_stats.items()):
+        color = colors[idx]
+        
+        iterations = [d.get('iteration', i) for i, d in enumerate(qaoa_stats_list)]
+        best_costs = [d.get('best_cost') for d in qaoa_stats_list]
+        valid_pcts = [d.get('valid_percentage', 0) for d in qaoa_stats_list]
+        unique_bs = [d.get('num_unique_bitstrings', 0) for d in qaoa_stats_list]
+        valid_shots = [d.get('valid_shots', 0) for d in qaoa_stats_list]
+        total_shots = [d.get('total_shots', v + d.get('invalid_shots', 0)) 
+                      for d, v in zip(qaoa_stats_list, valid_shots)]
+        
+        # Store final statistics
+        all_final_validities[label] = valid_pcts[-1] if valid_pcts else 0
+        all_final_costs[label] = best_costs[-1] if best_costs and best_costs[-1] is not None else None
+        all_avg_diversities[label] = np.mean(unique_bs) if unique_bs else 0
+        
+        # Plot 1: Cost Convergence
+        valid_costs = [c for c in best_costs if c is not None]
+        valid_iters = [it for it, c in zip(iterations, best_costs) if c is not None]
+        if valid_costs:
+            ax1.plot(valid_iters, valid_costs, 'o-', linewidth=2, markersize=6, 
+                    color=color, label=label, alpha=0.8)
+        
+        # Plot 2: Validity Percentage
+        ax2.plot(iterations, valid_pcts, 'o-', linewidth=2, markersize=5, 
+                color=color, label=label, alpha=0.8)
+        
+        # Plot 3: Solution Diversity
+        ax3.plot(iterations, unique_bs, 'o-', linewidth=2, markersize=5, 
+                color=color, label=label, alpha=0.8)
+        
+        # Plot 4: Valid Shot Fraction over time
+        valid_fractions = [v/t if t > 0 else 0 for v, t in zip(valid_shots, total_shots)]
+        ax4.plot(iterations, valid_fractions, 'o-', linewidth=2, markersize=5,
+                color=color, label=label, alpha=0.8)
+    
+    # Configure Plot 1: Cost Convergence
+    ax1.set_xlabel('Iteration', fontsize=11, fontweight='bold')
+    ax1.set_ylabel('Best Tour Cost (seconds)', fontsize=11, fontweight='bold')
+    ax1.set_title('Cost Convergence Comparison', fontsize=13, fontweight='bold')
+    ax1.legend(loc='upper right', fontsize=9)
+    ax1.grid(True, alpha=0.3)
+    
+    # Configure Plot 2: Validity
+    ax2.set_xlabel('Iteration', fontsize=11, fontweight='bold')
+    ax2.set_ylabel('Valid Tour Percentage (%)', fontsize=11, fontweight='bold')
+    ax2.set_title('Validity Rate Comparison', fontsize=13, fontweight='bold')
+    ax2.legend(loc='lower right', fontsize=9)
+    ax2.grid(True, alpha=0.3)
+    ax2.set_ylim(0, 105)
+    
+    # Configure Plot 3: Diversity
+    ax3.set_xlabel('Iteration', fontsize=11, fontweight='bold')
+    ax3.set_ylabel('Unique Bitstrings', fontsize=11, fontweight='bold')
+    ax3.set_title('Solution Diversity Comparison', fontsize=13, fontweight='bold')
+    ax3.legend(loc='upper right', fontsize=9)
+    ax3.grid(True, alpha=0.3)
+    
+    # Configure Plot 4: Valid Fraction (alternative view)
+    ax4.set_xlabel('Iteration', fontsize=11, fontweight='bold')
+    ax4.set_ylabel('Valid Shot Fraction', fontsize=11, fontweight='bold')
+    ax4.set_title('Valid Solution Rate Over Time', fontsize=13, fontweight='bold')
+    ax4.legend(loc='lower right', fontsize=9)
+    ax4.grid(True, alpha=0.3)
+    ax4.set_ylim(0, 1.05)
+
+    # add main title.
+    plt.suptitle('QAOA Multi-Run Comparison', fontsize=16, fontweight='bold', y=0.995)
+    plt.tight_layout(rect=[0, 0, 0.85, 0.99])
+    
+    return fig, axes
+
+
+def plot_qaoa_final_comparison_bars(labelled_qaoa_stats, figsize=(14, 5)):
+    """
+    Create bar chart comparison of final QAOA statistics across runs.
+    
+    Shows final validity rate, cost, and average diversity as bars for easy comparison.
+    
+    Parameters:
+    -----------
+    labelled_qaoa_stats : dict
+        Dictionary mapping run labels to lists of statistics dictionaries
+    figsize : tuple, optional
+        Figure size as (width, height)
+    
+    Returns:
+    --------
+    fig, axes : matplotlib figure and axes objects
+    """
+    if not labelled_qaoa_stats:
+        print("No data to plot!")
+        return None, None
+    
+    labels = list(labelled_qaoa_stats.keys())
+    n_runs = len(labels)
+    
+    # Extract final statistics
+    final_validities = []
+    final_costs = []
+    avg_diversities = []
+    
+    for label in labels:
+        stats_list = labelled_qaoa_stats[label]
+        
+        # Final validity
+        final_valid = stats_list[-1].get('valid_percentage', 0) if stats_list else 0
+        final_validities.append(final_valid)
+        
+        # Final cost
+        final_cost = stats_list[-1].get('best_cost') if stats_list else None
+        final_costs.append(final_cost if final_cost is not None else 0)
+        
+        # Average diversity
+        diversities = [d.get('num_unique_bitstrings', 0) for d in stats_list]
+        avg_div = np.mean(diversities) if diversities else 0
+        avg_diversities.append(avg_div)
+    
+    # Create figure with 3 subplots
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=figsize)
+    
+    x = np.arange(n_runs)
+    colors = plt.cm.Set3(np.linspace(0, 1, n_runs))
+    
+    # Plot 1: Final Validity Percentage
+    bars1 = ax1.bar(x, final_validities, color=colors, edgecolor='black', linewidth=1.5)
+    ax1.set_ylabel('Valid Tour Percentage (%)', fontsize=11, fontweight='bold')
+    ax1.set_title('Final Validity Rate', fontsize=12, fontweight='bold')
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(labels, rotation=45, ha='right')
+    ax1.set_ylim(0, 105)
+    ax1.grid(True, alpha=0.3, axis='y')
+    ax1.axhline(50, color='red', linestyle='--', alpha=0.5, linewidth=1.5, label='50% threshold')
+    ax1.legend(fontsize=9)
+    
+    # Add value labels on bars
+    for bar, val in zip(bars1, final_validities):
+        height = bar.get_height()
+        ax1.text(bar.get_x() + bar.get_width()/2., height,
+                f'{val:.1f}%', ha='center', va='bottom', fontsize=9, fontweight='bold')
+    
+    # Plot 2: Final Cost
+    valid_costs = [c if c > 0 else None for c in final_costs]
+    bars2 = ax2.bar(x, final_costs, color=colors, edgecolor='black', linewidth=1.5)
+    ax2.set_ylabel('Best Tour Cost (seconds)', fontsize=11, fontweight='bold')
+    ax2.set_title('Final Best Cost', fontsize=12, fontweight='bold')
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(labels, rotation=45, ha='right')
+    ax2.grid(True, alpha=0.3, axis='y')
+    
+    # Add value labels
+    for bar, val in zip(bars2, final_costs):
+        if val > 0:
+            height = bar.get_height()
+            ax2.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{val:.1f}s', ha='center', va='bottom', fontsize=9, fontweight='bold')
+    
+    # Plot 3: Average Diversity
+    bars3 = ax3.bar(x, avg_diversities, color=colors, edgecolor='black', linewidth=1.5)
+    ax3.set_ylabel('Avg Unique Bitstrings', fontsize=11, fontweight='bold')
+    ax3.set_title('Average Solution Diversity', fontsize=12, fontweight='bold')
+    ax3.set_xticks(x)
+    ax3.set_xticklabels(labels, rotation=45, ha='right')
+    ax3.grid(True, alpha=0.3, axis='y')
+    
+    # Add value labels
+    for bar, val in zip(bars3, avg_diversities):
+        height = bar.get_height()
+        ax3.text(bar.get_x() + bar.get_width()/2., height,
+                f'{val:.0f}', ha='center', va='bottom', fontsize=9, fontweight='bold')
+    
+    plt.suptitle('QAOA Run Comparison - Final Statistics', fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    
+    return fig, (ax1, ax2, ax3)
 
 
 def plot_valid_solution_hamming_distances(valid_tours, qubit_to_edge_map, G=None,

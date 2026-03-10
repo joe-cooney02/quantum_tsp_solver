@@ -1,0 +1,3 @@
+Tell claude this for the QAOA pretraining chat - use my nvidia card without needing to setup wsl for qiskit-aer-gpu.
+
+Okay, I think this is a good thing to try. Please implement the pennylane version with the gradients for pretraining and leave the COBYLA for the final optimization. A big benefit of this is that it lets the validity pre-training have a fully-connected layer with a larger fraction of the qubits. Also, if you generate more markdown files for summaries and thought processes, please store them in the Claude_Opinions folder, to keep the project organized.

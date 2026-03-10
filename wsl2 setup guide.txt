@@ -1,0 +1,11 @@
+wsl2 setup guide
+
+powershell (admin mode): wsl--install
+reboot
+powershell (admin): choose a distribution (wsl -l -o) (ubuntu 24.04 (LTS) OR 22.04)
+	wsl.exe --install -d Ubuntu-24.04
+wait
+set a UNIX username and password
+
+ensure environment up to date: sudo apt update && sudo apt upgrade -y
+install python: sudo apt install python3 (get python 3.13.9)

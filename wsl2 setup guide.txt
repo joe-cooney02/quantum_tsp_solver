@@ -5,7 +5,16 @@ reboot
 powershell (admin): choose a distribution (wsl -l -o) (ubuntu 24.04 (LTS) OR 22.04)
 	wsl.exe --install -d Ubuntu-24.04
 wait
-set a UNIX username and password
+set a UNIX username and password: joeco and PC PIN.
 
 ensure environment up to date: sudo apt update && sudo apt upgrade -y
 install python: sudo apt install python3 (get python 3.13.9)
+install packages?
+
+use VS code with wsl extension
+	open wsl terminal and go to project directory
+	run code .
+	install the vs code python extension
+	open Command Palette (CTRL+SHIFT+P)
+	type "Python: Select Interpreter"
+	choose python 3 executable.

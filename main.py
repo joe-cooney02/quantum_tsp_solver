@@ -68,7 +68,7 @@ print('SA-3 completed')
 
 # QAOA approximations
 # common QAOA arguments
-shots = 10000
+shots = 100
 inv_penalty_m = 4.5
 layers = 5
 exploration_strength = 0.1
@@ -200,7 +200,7 @@ print('QAOA baseline completed')
 # =============================================================================
 # Visualizations and data saving
 # =============================================================================
-save_all = True
+save_all = False
 
 
 experiment_results = {

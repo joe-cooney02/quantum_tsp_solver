@@ -379,7 +379,7 @@ def _split_circuit_with_2q_gates(circuit, batch_size, two_qubit_connections):
     return sub_circuits
 
 
-def simulate_split_circuits(sub_circuits, shots=1024, sim_method='statevector'):
+def simulate_split_circuits(sub_circuits, shots=1024, sim_method='statevector', device='CPU'):
     """
     Simulate split sub-circuits and combine results into full bitstrings.
     
@@ -399,7 +399,7 @@ def simulate_split_circuits(sub_circuits, shots=1024, sim_method='statevector'):
     sub_results = []
     
     for sub_circuit, qubit_indices in sub_circuits:
-        simulator = AerSimulator(method=sim_method)
+        simulator = AerSimulator(method=sim_method, device='GPU')
         
         transpiled_circuit = transpile(sub_circuit, simulator)
         
@@ -434,7 +434,7 @@ def simulate_split_circuits(sub_circuits, shots=1024, sim_method='statevector'):
     return combined_counts
 
 
-def simulate_large_circuit_in_batches(circuit, max_qubits_per_batch=10, shots=1024, sim_method='statevector', verbose=False):
+def simulate_large_circuit_in_batches(circuit, max_qubits_per_batch=10, shots=1024, sim_method='statevector', verbose=False, device='CPU'):
     """
     Convenience function to split and simulate a large circuit in one call.
     
@@ -468,7 +468,7 @@ def simulate_large_circuit_in_batches(circuit, max_qubits_per_batch=10, shots=10
     if verbose:
         print(f"\nSimulating with {shots} shots...")
     
-    results = simulate_split_circuits(sub_circuits, shots, sim_method)
+    results = simulate_split_circuits(sub_circuits, shots, sim_method, device=device)
     
     if verbose:
         print(f"Simulation complete! Got {len(results)} unique bitstrings")

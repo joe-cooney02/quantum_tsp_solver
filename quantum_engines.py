@@ -32,7 +32,7 @@ def QAOA_approx(graph, graphs_dict, runtime_data, tt_data, qaoa_progress, verbos
                 qubit_batch_size=None, inv_penalty_m=1, sim_method='statevector', label='QAOA', warm_start=None, 
                 exploration_strength=0, initialization_strategy='zero', custom_initial_params=None, 
                 lock_pretrained_layers=0, use_local_2q_gates=False, use_soft_validity=False, 
-                soft_validity_penalty_base=10.0):
+                soft_validity_penalty_base=10.0, device='CPU'):
     '''
     Parameters
     ----------
@@ -157,7 +157,7 @@ def QAOA_approx(graph, graphs_dict, runtime_data, tt_data, qaoa_progress, verbos
                           args=(circuit, qubit_batch_size, shots, sim_method,
                                 layers, graph, qubit_to_edge_map, qaoa_results_over_time, 
                                 inv_penalty, locked_params, lock_pretrained_layers,
-                                use_soft_validity, soft_validity_penalty_base),
+                                use_soft_validity, soft_validity_penalty_base, device),
                           method='COBYLA')
     
     end_time = time.time()
@@ -196,7 +196,7 @@ def QAOA_approx(graph, graphs_dict, runtime_data, tt_data, qaoa_progress, verbos
 
 def run_QAOA(optimizable_parameters, circuit, batch_size, shots, sim_method, layers, graph, 
              qubit_to_edge_map, results_over_time, inv_penalty=0, locked_params=None, 
-             lock_pretrained_layers=0, use_soft_validity=False, soft_validity_penalty_base=10.0):
+             lock_pretrained_layers=0, use_soft_validity=False, soft_validity_penalty_base=10.0, device='CPU'):
     """
     Objective function for QAOA optimization.
     
@@ -238,7 +238,7 @@ def run_QAOA(optimizable_parameters, circuit, batch_size, shots, sim_method, lay
 
     
     bound_circuit = bind_qaoa_parameters(circuit, gamma_values, beta_values)
-    counts = simulate_large_circuit_in_batches(bound_circuit, batch_size, shots, sim_method)
+    counts = simulate_large_circuit_in_batches(bound_circuit, batch_size, shots, sim_method, device=device)
     
     bitstrings = list(counts.keys())
     expectation_val = get_cost_expectation(bitstrings, counts, qubit_to_edge_map, graph, 

@@ -72,6 +72,7 @@ shots = 100
 inv_penalty_m = 4.5
 layers = 5
 exploration_strength = 0.1
+device='GPU'
 
 #TODO: explore futher the quantum pre-training approach, test more aggressive pretraining.
 # =============================================================================
@@ -99,7 +100,8 @@ for method in warm_start_methods:
         warm_start=method,
         exploration_strength=exploration_strength,
         label=f'QAOA-{method}',
-        initialization_strategy='zero'
+        initialization_strategy='zero',
+        device=device
     )
     print(f'QAOA with {method} warm-start completed')
 '''
@@ -122,7 +124,8 @@ pretrained_params, validity_rates = pretrain_and_create_initial_params(
     batch_size=8,
     max_iterations=30,
     use_local_2q_gates=True,
-    verbose=False
+    verbose=False,
+    device=device
 )
 
 print(f"\nPre-training achieved {validity_rates[0]:.2%} validity rate")
@@ -138,7 +141,8 @@ graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(
     warm_start=None,
     label='QAOA-Pretrained-L3-2Q',
     custom_initial_params=pretrained_params,
-    use_soft_validity=True
+    use_soft_validity=True,
+    device=device
 )
 print('QAOA with pre-trained layer 0 completed')
 
@@ -160,7 +164,8 @@ pretrained_params, validity_rates = pretrain_and_create_initial_params(
     shots=2048,
     batch_size=8,
     max_iterations=30,
-    verbose=True
+    verbose=True,
+    device=device
 )
 
 graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(
@@ -172,7 +177,8 @@ graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(
     warm_start='nearest_neighbor',
     exploration_strength=exploration_strength,
     label='QAOA-WS+Pretrained',
-    custom_initial_params=pretrained_params
+    custom_initial_params=pretrained_params,
+    device=device
 )
 print('QAOA with warm-start AND pretraining completed')
 '''
@@ -192,7 +198,8 @@ graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(
     warm_start=None,
     label='QAOA-Baseline-2Q',
     initialization_strategy='zero',
-    use_local_2q_gates=True
+    use_local_2q_gates=True,
+    device=device
 )
 print('QAOA baseline completed')
 '''
@@ -219,7 +226,8 @@ hyperparameters = {
     'inv_penalty_m': inv_penalty_m,
     'warm_start': 'ALL',
     'exploration_strength': exploration_strength,
-    'initialization_strategy': 'zero'
+    'initialization_strategy': 'zero',
+    'device': device
     }
 
 

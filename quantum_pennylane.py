@@ -4,7 +4,7 @@ PennyLane-based QAOA implementation with GPU acceleration.
 
 This module provides PennyLane implementations of QAOA circuits and optimization
 for TSP problems. Key features:
-- Native Windows GPU support (no WSL2 needed)
+- Native Windows GPU support (no WSL2 needed) (untrue!!)
 - Gradient-based pretraining for validity
 - COBYLA optimization for cost minimization
 - Fully-connected layer support (larger batch sizes)
@@ -136,7 +136,7 @@ def create_qaoa_circuit_pennylane(graph, qubit_to_edge_map, num_layers=1,
                 for qubit_idx in range(num_qubits):
                     qml.RX(2 * betas[layer], wires=qubit_idx)
             
-            return qml.sample()
+            return qml.sample(wires=[i for i in range(num_qubits)])
         
         return qnode()
     
@@ -264,6 +264,7 @@ def pretrain_validity_pennylane(graph, qubit_to_edge_map, num_layers=1,
     from quantum_helpers import is_valid_tsp_tour
     
     num_qubits = len(qubit_to_edge_map)
+    num_nodes = graph.number_of_nodes()
     
     # Determine batch size
     if batch_size is None:
@@ -332,7 +333,7 @@ def pretrain_validity_pennylane(graph, qubit_to_edge_map, num_layers=1,
         
         # Return expectation of violation (we'll minimize this)
         # Use a simple differentiable proxy: sum of squared deviations
-        measurements = qml.sample()
+        measurements = qml.sample(wires=[i for i in range(num_qubits)])
         
         # Compute violation for each sample
         violations = []

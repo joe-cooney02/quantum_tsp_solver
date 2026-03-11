@@ -28,7 +28,7 @@ from quantum_helpers import (
 
 def pretrain_validity_layers(graph, qubit_to_edge_map, num_layers=1,
                             shots=1024, batch_size=8, sim_method='statevector',
-                            max_iterations=50, verbose=True, use_local_2q_gates=False):
+                            max_iterations=50, verbose=True, use_local_2q_gates=False, device='CPU'):
     """
     Pre-train QAOA layers together to maximize the probability of valid solutions.
     
@@ -94,7 +94,7 @@ def pretrain_validity_layers(graph, qubit_to_edge_map, num_layers=1,
         
         # Bind and simulate
         bound_circuit = bind_qaoa_parameters(circuit, gamma_values, beta_values)
-        counts = simulate_large_circuit_in_batches(bound_circuit, batch_size, shots, sim_method)
+        counts = simulate_large_circuit_in_batches(bound_circuit, batch_size, shots, sim_method, device=device)
         
         # Calculate validity rate
         valid_shots, invalid_shots = count_valid_invalid(counts, qubit_to_edge_map, graph)
@@ -203,7 +203,7 @@ def create_pretrained_initial_params(pretrained_gammas, pretrained_betas,
 
 def pretrain_and_create_initial_params(graph, num_pretrain_layers=1, total_layers=3,
                                        shots=1024, batch_size=8, 
-                                       max_iterations=50, verbose=True, use_local_2q_gates=False):
+                                       max_iterations=50, verbose=True, use_local_2q_gates=False, device='CPU'):
     """
     Convenience function: pre-train layers and create full initial parameters.
     
@@ -247,7 +247,8 @@ def pretrain_and_create_initial_params(graph, num_pretrain_layers=1, total_layer
         batch_size=batch_size,
         max_iterations=max_iterations,
         verbose=verbose,
-        use_local_2q_gates=use_local_2q_gates
+        use_local_2q_gates=use_local_2q_gates,
+        device=device
     )
     
     # Create full parameter set for all layers

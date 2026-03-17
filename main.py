@@ -21,7 +21,7 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 import json
-   
+
 
 # get data for graphs
 curr_prob = '4m_10_1'

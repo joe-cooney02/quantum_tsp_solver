@@ -20,6 +20,51 @@ import networkx as nx
 from opt_helpers import get_warm_start_tour
 
 
+def check_gpu_available():
+    """
+    Check if GPU is available for qiskit-aer simulation.
+    
+    Returns:
+    --------
+    bool: True if GPU is available, False otherwise
+    """
+    try:
+        simulator = AerSimulator(method='statevector', device='GPU')
+        return True
+    except Exception as e:
+        print(f"GPU check failed: {e}")
+        return False
+
+
+def get_simulator(method='statevector', device='CPU'):
+    """
+    Safely create an AerSimulator with proper device selection.
+    
+    Parameters:
+    -----------
+    method : str
+        Simulation method ('statevector' or 'density_matrix')
+    device : str
+        Requested device ('CPU' or 'GPU')
+    
+    Returns:
+    --------
+    AerSimulator: Configured simulator
+    """
+    
+    if device.upper() == 'GPU':
+        try:
+            simulator = AerSimulator(method=method, device='GPU')
+            print("✓ Using GPU for simulation")
+            return simulator
+        except Exception as e:
+            print(f"⚠ GPU requested but not available: {e}")
+            print("  Falling back to CPU")
+            return AerSimulator(method=method, device='CPU')
+    else:
+        return AerSimulator(method=method, device='CPU')
+
+
 def create_qubit_to_edge_map(G):
     """
     Create a mapping from qubit indices to edges in a graph.
@@ -399,7 +444,7 @@ def simulate_split_circuits(sub_circuits, shots=1024, sim_method='statevector', 
     sub_results = []
     
     for sub_circuit, qubit_indices in sub_circuits:
-        simulator = AerSimulator(method=sim_method, device='GPU')
+        simulator = get_simulator(method=sim_method, device=device)
         
         transpiled_circuit = transpile(sub_circuit, simulator)
         

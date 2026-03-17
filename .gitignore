@@ -1,4 +1,6 @@
 __pycache__
 .spyproject
+.stignore
+.stfolder
 .env
 .venv

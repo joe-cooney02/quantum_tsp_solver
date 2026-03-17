@@ -444,7 +444,7 @@ def simulate_split_circuits(sub_circuits, shots=1024, sim_method='statevector', 
     sub_results = []
     
     for sub_circuit, qubit_indices in sub_circuits:
-        simulator = get_simulator(method=sim_method, device=device)
+        simulator = AerSimulator(method=sim_method, device=device)
         
         transpiled_circuit = transpile(sub_circuit, simulator)
         

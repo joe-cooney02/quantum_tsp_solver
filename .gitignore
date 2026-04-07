@@ -4,3 +4,5 @@ __pycache__
 .stfolder
 .env
 .venv
+spyder-env
+requirements.txt

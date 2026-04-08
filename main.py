@@ -72,6 +72,7 @@ shots = 100
 inv_penalty_m = 4.5
 layers = 5
 exploration_strength = 0.1
+batch_size=29
 device='GPU'
 
 #TODO: explore futher the quantum pre-training approach, test more aggressive pretraining.
@@ -121,7 +122,7 @@ pretrained_params, validity_rates = pretrain_and_create_initial_params(
     num_pretrain_layers=3,
     total_layers=layers,
     shots=2048,
-    batch_size=8,
+    batch_size=batch_size,
     max_iterations=30,
     use_local_2q_gates=True,
     verbose=False,
@@ -222,7 +223,7 @@ experiment_results = {
 hyperparameters = {
     'layers': layers,
     'shots': shots,
-    'qubit_batch_size': 8,
+    'qubit_batch_size': batch_size,
     'inv_penalty_m': inv_penalty_m,
     'warm_start': 'ALL',
     'exploration_strength': exploration_strength,

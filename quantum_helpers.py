@@ -36,7 +36,7 @@ def check_gpu_available():
         return False
 
 
-def get_simulator(method='statevector', device='CPU'):
+def get_simulator(method='statevector', device='CPU', fusion=True):
     """
     Safely create an AerSimulator with proper device selection.
     
@@ -54,13 +54,13 @@ def get_simulator(method='statevector', device='CPU'):
     
     if device.upper() == 'GPU':
         try:
-            simulator = AerSimulator(method=method, device='GPU')
+            simulator = AerSimulator(method=method, device='GPU', fusion_enable=fusion)
             print("✓ Using GPU for simulation")
             return simulator
         except Exception as e:
             print(f"⚠ GPU requested but not available: {e}")
             print("  Falling back to CPU")
-            return AerSimulator(method=method, device='CPU')
+            return AerSimulator(method=method, device='CPU', fusion_enable=fusion)
     else:
         return AerSimulator(method=method, device='CPU')
 

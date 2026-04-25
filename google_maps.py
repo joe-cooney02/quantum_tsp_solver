@@ -140,14 +140,56 @@ def make_map_route(directions_matrix, route_plan):
     return None
 
 
+def make_new_problem(rad, num_pts):
+    
+    cwd = os.getcwd()
+    problem_number = 1
+    path_exists = True
+    path = f"{rad}m_{num_pts}_{problem_number}"
+    
+    while path_exists:
+        path = f"{rad}m_{num_pts}_{problem_number}"
+        
+        if os.path.isdir(path):
+            # directory exists
+            problem_number = problem_number + 1
+        else:
+            # directory doesn't exist (make it)
+            path_exists=False
+            print(f"creating new problem at: {cwd}/{path}")
+            os.mkdir(path)
+            
+            # get addresss set
+            adds1 = get_addresses(get_random_coords(stl_center_latlon, rad, num_pts))
+            save_address_set(adds1, f"{path}/address-set.txt")
+            adds1 = get_address_set(f'{path}/address-set.txt')
+            
+            # make travel time and directions matrices
+            tt_matrix_1, dirs_mat_1 = make_travel_time_matrix(adds1)
+            
+            # save travel times
+            save_travel_time_matrix(tt_matrix_1, f'{path}/ttm.txt')
+            
+            # save directions matrix
+            save_directions_matrix(dirs_mat_1, f'{path}/dir-mat.json')
+            
+            
+    return True
+            
+
 if __name__ == 'main':
-    # print(get_addresses(get_random_coords(stl_center_latlon, 4, 10)))
-    adds1 = get_address_set('address-set_4m_10_1.txt')
-    tt_matrix_1, dirs_mat_1 = make_travel_time_matrix(adds1)
-    save_travel_time_matrix(tt_matrix_1, 'ttm_4m_10_1.txt')
-    ttm_1 = get_travel_time_matrix('ttm_4m_10_1.txt')
-    save_directions_matrix(dirs_mat_1, 'dir-mat_4m_10_1.json')
-    dir_m_1_lded = get_directions_matrix('dir-mat_4m_10_1.json')
+    # FYI this doesnt do anything you have to call make_new_problem() in the console.
+    
+    rad = 4 # radius in miles to sample from
+    num_pts = 6 # number of points to sample
+    if make_new_problem(rad, num_pts) == True:
+        print("Problem Created")
+    
+    
+    
+    
+    
+    
     
     
     

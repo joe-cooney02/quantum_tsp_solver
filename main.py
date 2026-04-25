@@ -24,7 +24,7 @@ import json
 
 
 # get data for graphs
-curr_prob = '4m_10_1'
+curr_prob = '4m_6_1'
 ttm = get_travel_time_matrix(f'{curr_prob}/ttm.txt')
 address_set = get_address_set(f'{curr_prob}/address-set.txt')
 dirs_mat = get_directions_matrix(f'{curr_prob}/dir-mat.json')
@@ -68,14 +68,41 @@ print('SA-3 completed')
 
 # QAOA approximations
 # common QAOA arguments
-shots = 100
+shots = 10000
+pretrain_shots=10000
 inv_penalty_m = 4.5
 layers = 5
 exploration_strength = 0.1
-batch_size=29
+batch_size=30
 device='GPU'
 
+# notes on batch size: 
+'''
+double-precision doubles size of statevector rel. to single-precision
+each qubit doubles size of statevector
+a 30-qubit single-precision statevector takes ~8.6 GB (8 GB and change)
+This corresponds to a 6-node problem, directed graph
+Directed graph doubles number of qubits rel. to undirected graph (num qubits is: ([num_nodes] choose 2) * 2).
+'''
+    
 #TODO: explore futher the quantum pre-training approach, test more aggressive pretraining.
+#TODO: see "What I learned from GPU Test"
+#TODO: try running multiple batches in parallel on the GPU. 7 x <=27 qubit batches could be interesting.
+    # despite the size of the statevector, the communication with cpu is making gpu only use ~50/180W
+    # for single-precision and ~70/180W for double-precision. 
+    # this is the bottleneck and buying bigger GPU/changing the cores around doesn't make a difference.
+    # TODO: try increasing the number of layers to alleviate this (make circuit more complicated)
+    # TODO: ensure parameterized circuits keep the circuit in GPU memory (may need less cpu comm.)
+        # this one is really important. i think you can keep the parameterized circuit in 
+        # GPU memory and only pass the new parameters through with the CPU instead of regenerating
+        # the entire circuit (which is what this does)
+    
+    # TODO: use AER primitives (Estimator, not AerSimulator) and save_expectation_value so the GPU can keep data on it and 
+        # do the expectation value calculations.  
+    
+    # because the bottleneck is the cpu, especially in single-threaded python (GIL),
+    # this has to be solved first
+    
 # =============================================================================
 # Example 1: QAOA with different warm-start methods
 # =============================================================================
@@ -121,10 +148,10 @@ pretrained_params, validity_rates = pretrain_and_create_initial_params(
     graph,
     num_pretrain_layers=3,
     total_layers=layers,
-    shots=2048,
+    shots=pretrain_shots,
     batch_size=batch_size,
     max_iterations=30,
-    use_local_2q_gates=True,
+    use_local_2q_gates=False,
     verbose=False,
     device=device
 )
@@ -223,6 +250,7 @@ experiment_results = {
 hyperparameters = {
     'layers': layers,
     'shots': shots,
+    'pretrain_shots': pretrain_shots,
     'qubit_batch_size': batch_size,
     'inv_penalty_m': inv_penalty_m,
     'warm_start': 'ALL',

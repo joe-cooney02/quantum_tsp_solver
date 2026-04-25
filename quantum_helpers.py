@@ -15,6 +15,7 @@ from qiskit import QuantumCircuit, transpile
 from qiskit.circuit import Parameter
 from qiskit.qpy import dump, load
 from qiskit_aer import AerSimulator
+from qiskit_aer.primitives import EstimatorV2
 import numpy as np
 import networkx as nx
 from opt_helpers import get_warm_start_tour
@@ -36,7 +37,7 @@ def check_gpu_available():
         return False
 
 
-def get_simulator(method='statevector', device='CPU', fusion=True):
+def get_simulator(method='statevector', device='CPU', fusion=True, precision='single', shots=10000, verbose=False):
     """
     Safely create an AerSimulator with proper device selection.
     
@@ -54,13 +55,37 @@ def get_simulator(method='statevector', device='CPU', fusion=True):
     
     if device.upper() == 'GPU':
         try:
-            simulator = AerSimulator(method=method, device='GPU', fusion_enable=fusion)
-            print("✓ Using GPU for simulation")
+            
+            simulator = AerSimulator(method=method, device='GPU', fusion_enable=fusion, precision=precision, 
+                                     cuStateVec_enable=True, max_parallel_experiments=6, batched_shots_gpu=True,
+                                     max_parallel_threads=6)
+            
+            
+            '''
+            options = {
+                "backend_options": {
+                    "method": method,
+                    "device": device,
+                    "precision": precision,
+                    "cuStateVec_enable": True,
+                    "max_parallel_experiments": 6,
+                    "max_parallel_threads": 6,
+                    "batched_shots_gpu": True,  # Keep shots on-device
+                    "default_shots": shots
+                }
+            }
+            
+            simulator = EstimatorV2(options=options)
+            '''
+            
+            if verbose:
+                print("✓ Using GPU for simulation")
             return simulator
         except Exception as e:
             print(f"⚠ GPU requested but not available: {e}")
             print("  Falling back to CPU")
-            return AerSimulator(method=method, device='CPU', fusion_enable=fusion)
+            return AerSimulator(method=method, device='CPU', 
+                                fusion_enable=fusion, cuStateVec_enable=True)
     else:
         return AerSimulator(method=method, device='CPU')
 
@@ -441,21 +466,38 @@ def simulate_split_circuits(sub_circuits, shots=1024, sim_method='statevector', 
     """
     
     # Simulate each sub-circuit
+    transpiled_circuits = []
+    circuit_qubit_indices = []
     sub_results = []
     
+    simulator = get_simulator(method=sim_method, device=device, shots=shots)
+    
     for sub_circuit, qubit_indices in sub_circuits:
-        simulator = AerSimulator(method=sim_method, device=device)
         
         transpiled_circuit = transpile(sub_circuit, simulator)
+        transpiled_circuits.append(transpiled_circuit)
         
-        job = simulator.run(transpiled_circuit, shots=shots)
-        result = job.result()
-        counts = result.get_counts()
-        sub_results.append((counts, qubit_indices))
+        circuit_qubit_indices.append(qubit_indices)
+        
+        
+    # we set this to run in parellel with max 8 threads above
+    # change this because now it is an EstimatorV2 (needs PUB's)
+    job = simulator.run(transpiled_circuits, shots=shots)
+    result = job.result()
+    
+    for i in range(len(transpiled_circuits)):
+        counts = result.get_counts(transpiled_circuits[i])
+        sub_results.append((counts, circuit_qubit_indices[i])) 
     
     # Combine results
     # For single-qubit gates only, each qubit's measurement is independent
     # So we randomly sample from each sub-circuit and concatenate
+    # TODO: figure out what this is actually doing and how to best accelerate
+        # for high-shot simulations, the EstimatorV2 precision=0 option calculates the exp val <Y|O|Y> on the GPU.
+        # this would be great if we had an observable O that accurately reflected the qubit contributions to travel times.
+        # alternatively, figure out how to calculate the get_cost_expectation either in parallel on cpu or on gpu.
+        # I don't think we have to worry about the statevector being loaded on and off the GPU as, with 2-qubit gates,
+        # this is minimal compared to the circuit execution time. also, the exp val calculation may need the VRAM anyway.
     combined_counts = {}
     
     for shot_idx in range(shots):

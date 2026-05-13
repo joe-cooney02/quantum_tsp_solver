@@ -90,10 +90,11 @@ def pretrain_validity_layers(graph, qubit_to_edge_map, num_layers=1,
         
         # Split parameters
         gamma_values = params[:num_layers]
-        beta_values = params[num_layers:]
+        beta_values = params[num_layers:2*num_layers]
+        theta_values = params[2*num_layers:]
         
         # Bind and simulate
-        bound_circuit = bind_qaoa_parameters(circuit, gamma_values, beta_values)
+        bound_circuit = bind_qaoa_parameters(circuit, gamma_values, beta_values, theta_values)
         counts = simulate_large_circuit_in_batches(bound_circuit, batch_size, shots, sim_method, device=device)
         
         # Calculate validity rate
@@ -113,10 +114,10 @@ def pretrain_validity_layers(graph, qubit_to_edge_map, num_layers=1,
         return -validity_rate
     
     # Initialize all parameters together
-    initial_params = np.random.uniform(-0.1, 0.1, 2 * num_layers)
+    initial_params = np.random.uniform(-0.1, 0.1, 3 * num_layers)
     
     if verbose:
-        print(f"Optimizing {2 * num_layers} parameters together...")
+        print(f"Optimizing {3 * num_layers} parameters together...")
     
     # Optimize
     result = minimize(
@@ -127,7 +128,8 @@ def pretrain_validity_layers(graph, qubit_to_edge_map, num_layers=1,
     )
     
     optimal_gammas = result.x[:num_layers]
-    optimal_betas = result.x[num_layers:]
+    optimal_betas = result.x[num_layers:2*num_layers]
+    optimal_thetas = result.x[2*num_layers:]
     
     if verbose:
         print(f"\n{'='*60}")
@@ -137,10 +139,10 @@ def pretrain_validity_layers(graph, qubit_to_edge_map, num_layers=1,
         print(f"  Optimal betas: {optimal_betas}")
         print(f"{'='*60}\n")
     
-    return optimal_gammas.tolist(), optimal_betas.tolist(), best_validity[0]
+    return optimal_gammas.tolist(), optimal_betas.tolist(), optimal_thetas.tolist(), best_validity[0]
 
 
-def create_pretrained_initial_params(pretrained_gammas, pretrained_betas, 
+def create_pretrained_initial_params(pretrained_gammas, pretrained_betas, pretrained_thetas, 
                                      total_layers, strategy='extend_with_zeros'):
     """
     Create full initial parameter set for QAOA using pre-trained layers.
@@ -172,6 +174,7 @@ def create_pretrained_initial_params(pretrained_gammas, pretrained_betas,
     # Start with pre-trained values
     all_gammas = list(pretrained_gammas)
     all_betas = list(pretrained_betas)
+    all_thetas = list(pretrained_thetas)
     
     # Add remaining layers
     remaining_layers = total_layers - num_pretrained
@@ -180,25 +183,30 @@ def create_pretrained_initial_params(pretrained_gammas, pretrained_betas,
         if strategy == 'extend_with_zeros':
             all_gammas.extend([0.0] * remaining_layers)
             all_betas.extend([0.0] * remaining_layers)
+            all_thetas.extend([0.0] * remaining_layers)
             
         elif strategy == 'extend_with_small_random':
             all_gammas.extend(np.random.uniform(-0.1, 0.1, remaining_layers))
             all_betas.extend(np.random.uniform(-0.1, 0.1, remaining_layers))
+            all_thetas.extend(np.random.uniform[-0.1, 0.1, remaining_layers])
             
         elif strategy == 'extend_with_linear':
             # Linearly interpolate from last pretrained value to a reasonable target
             last_gamma = pretrained_gammas[-1]
             last_beta = pretrained_betas[-1]
+            last_theta = pretrained_thetas[-1]
             
             gamma_extension = np.linspace(last_gamma, np.pi/4, remaining_layers + 1)[1:]
             beta_extension = np.linspace(last_beta, np.pi/2, remaining_layers + 1)[1:]
+            theta_extension = np.linspace(last_theta, np.pi/4, remaining_layers + 1)[1:]
             
             all_gammas.extend(gamma_extension)
             all_betas.extend(beta_extension)
+            all_thetas.extend(theta_extension)
         else:
             raise ValueError(f"Unknown strategy: {strategy}")
     
-    return all_gammas + all_betas
+    return all_gammas + all_betas + all_thetas
 
 
 def pretrain_and_create_initial_params(graph, num_pretrain_layers=1, total_layers=3,
@@ -240,7 +248,7 @@ def pretrain_and_create_initial_params(graph, num_pretrain_layers=1, total_layer
     qubit_to_edge_map = create_qubit_to_edge_map(graph)
     
     # Pre-train specified number of layers
-    pretrained_gammas, pretrained_betas, validity_rate = pretrain_validity_layers(
+    pretrained_gammas, pretrained_betas, pretrained_thetas, validity_rate = pretrain_validity_layers(
         graph, qubit_to_edge_map,
         num_layers=num_pretrain_layers,
         shots=shots,
@@ -253,7 +261,7 @@ def pretrain_and_create_initial_params(graph, num_pretrain_layers=1, total_layer
     
     # Create full parameter set for all layers
     initial_params = create_pretrained_initial_params(
-        pretrained_gammas, pretrained_betas,
+        pretrained_gammas, pretrained_betas, pretrained_thetas,
         total_layers=total_layers,
         strategy='extend_with_zeros'
     )

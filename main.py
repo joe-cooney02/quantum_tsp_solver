@@ -75,6 +75,7 @@ layers = 5
 exploration_strength = 0.1
 batch_size=30
 device='GPU'
+verbose=True
 
 # notes on batch size: 
 '''
@@ -151,8 +152,8 @@ pretrained_params, validity_rates = pretrain_and_create_initial_params(
     shots=pretrain_shots,
     batch_size=batch_size,
     max_iterations=30,
-    use_local_2q_gates=False,
-    verbose=False,
+    use_local_2q_gates=True,
+    verbose=verbose,
     device=device
 )
 
@@ -170,6 +171,7 @@ graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(
     label='QAOA-Pretrained-L3-2Q',
     custom_initial_params=pretrained_params,
     use_soft_validity=True,
+    use_local_2q_gates=True,
     device=device
 )
 print('QAOA with pre-trained layer 0 completed')
@@ -192,7 +194,7 @@ pretrained_params, validity_rates = pretrain_and_create_initial_params(
     shots=2048,
     batch_size=8,
     max_iterations=30,
-    verbose=True,
+    verbose=verbose,
     device=device
 )
 

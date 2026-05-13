@@ -18,6 +18,7 @@ from qiskit_aer import AerSimulator
 from qiskit_aer.primitives import EstimatorV2
 import numpy as np
 import networkx as nx
+import itertools as it
 from opt_helpers import get_warm_start_tour
 
 
@@ -176,9 +177,14 @@ def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False, 
     # Create quantum circuit
     qc = QuantumCircuit(num_qubits, num_qubits)
     
-    # Create parameters for each layer
+    # Create parameters for each layer & purpose:
+        # gamma: single-qubit rz
+        # beta: mixer
+        # theta: two-qubit rz
+        
     gamma_params = [Parameter(f'gamma_{i}') for i in range(num_layers)]
     beta_params = [Parameter(f'beta_{i}') for i in range(num_layers)]
+    theta_params = [Parameter(f'theta_{i}') for i in range(num_layers)]
     
     # Initial state
     if warm_start_tour is not None:
@@ -223,17 +229,14 @@ def create_tsp_qaoa_circuit(G, qubit_to_edge_map, num_layers=1, barriers=False, 
                 # Determine qubit range for this batch
                 start_qubit = batch_idx * batch_size
                 end_qubit = min(start_qubit + batch_size, num_qubits)
-                
-                # Add CZ gates between adjacent qubits in this batch
-                # Pattern: 0-1, 2-3, 4-5, ... (even pairs first)
-                for i in range(start_qubit, end_qubit - 1, 2):
-                    if i + 1 < end_qubit:
-                        qc.cz(i, i + 1)
-                
-                # Then: 1-2, 3-4, 5-6, ... (odd pairs)
-                for i in range(start_qubit + 1, end_qubit - 1, 2):
-                    if i + 1 < end_qubit:
-                        qc.cz(i, i + 1)
+
+                        
+                qubits_in_batch = [i for i in range(start_qubit, end_qubit-1)]
+                qubit_pairs = it.combinations(qubits_in_batch, 2)
+                for pair in qubit_pairs:
+                    qc.cz(pair[0], pair[1])
+                    qc.rz(theta_params[layer], pair[1])
+                    qc.cz(pair[1], pair[0])
         
         if barriers:
             qc.barrier()
@@ -610,7 +613,7 @@ def load_qaoa_circuit(filename):
     return circuits[0]
 
 
-def bind_qaoa_parameters(circuit, gamma_values, beta_values):
+def bind_qaoa_parameters(circuit, gamma_values, beta_values, theta_values):
     """
     Bind parameter values to a QAOA circuit.
     
@@ -634,6 +637,7 @@ def bind_qaoa_parameters(circuit, gamma_values, beta_values):
     for i in range(num_layers):
         param_dict[f'gamma_{i}'] = gamma_values[i]
         param_dict[f'beta_{i}'] = beta_values[i]
+        param_dict[f'theta_{i}'] = theta_values[i]
     
     # Bind parameters
     bound_circuit = circuit.assign_parameters(param_dict)
@@ -659,26 +663,30 @@ def get_initial_parameters(num_layers, strategy='random', total_time=1.0):
     if strategy == 'random':
         gamma_values = np.random.uniform(0, 2*np.pi, num_layers)
         beta_values = np.random.uniform(0, np.pi, num_layers)
+        theta_values = np.random.uniform(0, 2*np.pi, num_layers)
         
     elif strategy == 'linear':
         # Linear interpolation from 0 to optimal-ish values
         gamma_values = np.linspace(0, np.pi/4, num_layers)
         beta_values = np.linspace(0, np.pi/2, num_layers)
+        theta_values = np.linspace(0, np.pi/4, num_layers)
         
     elif strategy == 'zero':
         gamma_values = np.zeros(num_layers)
         beta_values = np.zeros(num_layers)
+        theta_values = gamma_values = np.zeros(num_layers)
         
     elif strategy == 'tqa':
         # Trotterized Quantum Annealing (proven to help)
         s = np.linspace(0, 1, num_layers + 1)[1:]
         gamma_values = (s * total_time).tolist()
         beta_values = ((1 - s) * total_time).tolist()
+        theta_values = gamma_values = (s * total_time).tolist()
         
     else:
         raise ValueError(f"Unknown strategy: {strategy}")
     
-    return gamma_values, beta_values
+    return gamma_values, beta_values, theta_values
 
 
 def create_and_save_qaoa_circuit(G, qubit_to_edge_map, num_layers, filename):

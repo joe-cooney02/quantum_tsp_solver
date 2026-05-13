@@ -101,16 +101,17 @@ def QAOA_approx(graph, graphs_dict, runtime_data, tt_data, qaoa_progress, verbos
     
     # Use custom initial parameters if provided, otherwise generate them
     if custom_initial_params is not None:
-        # Custom params should be [gamma_0, ..., gamma_n, beta_0, ..., beta_n]
-        if len(custom_initial_params) != 2 * layers:
-            raise ValueError(f"custom_initial_params must have length {2*layers} "
+        # Custom params should be [gamma_0, ..., gamma_n, beta_0, ..., beta_n, etc...]
+        if len(custom_initial_params) != 3 * layers:
+            raise ValueError(f"custom_initial_params must have length {3*layers} "
                            f"(got {len(custom_initial_params)})")
         init_params = custom_initial_params
         gamma_values = init_params[:layers]
-        beta_values = init_params[layers:]
+        beta_values = init_params[layers:2*layers]
+        theta_values = init_params[2*layers:]
     else:
-        gamma_values, beta_values = get_initial_parameters(layers, strategy=initialization_strategy)
-        init_params = [i for i in gamma_values] + [i for i in beta_values]
+        gamma_values, beta_values, theta_values = get_initial_parameters(layers, strategy=initialization_strategy)
+        init_params = [i for i in gamma_values] + [i for i in beta_values] + [i for i in theta_values]
     
     # Handle parameter locking
     if lock_pretrained_layers > 0:
@@ -122,18 +123,21 @@ def QAOA_approx(graph, graphs_dict, runtime_data, tt_data, qaoa_progress, verbos
         # Extract locked and optimizable parameters
         locked_gammas = init_params[:lock_pretrained_layers]
         locked_betas = init_params[layers:layers + lock_pretrained_layers]
+        locked_thetas = init_params[2*layers: 2*layers + lock_pretrained_layers]
         
         optimizable_gammas = init_params[lock_pretrained_layers:layers]
-        optimizable_betas = init_params[layers + lock_pretrained_layers:]
+        optimizable_betas = init_params[layers + lock_pretrained_layers:2*layers]
+        optimizable_thetas = init_params[2*layers + lock_pretrained_layers:]
         
-        locked_params = locked_gammas + locked_betas
-        optimizable_init_params = optimizable_gammas + optimizable_betas
+        locked_params = locked_gammas + locked_betas + locked_thetas
+        optimizable_init_params = optimizable_gammas + optimizable_betas + optimizable_thetas
         
         print("\nParameter Locking Enabled:")
         print(f"  Locked layers: 0-{lock_pretrained_layers-1} ({len(locked_params)} params)")
         print(f"  Optimizable layers: {lock_pretrained_layers}-{layers-1} ({len(optimizable_init_params)} params)")
         print(f"  Locked gammas: {locked_gammas}")
         print(f"  Locked betas: {locked_betas}")
+        print(f"  Locked thetas: {locked_thetas}")
     else:
         locked_params = None
         optimizable_init_params = init_params
@@ -223,21 +227,26 @@ def run_QAOA(optimizable_parameters, circuit, batch_size, shots, sim_method, lay
         num_optimizable_gammas = layers - lock_pretrained_layers
         
         locked_gammas = locked_params[:num_locked_gammas]
-        locked_betas = locked_params[num_locked_gammas:]
+        locked_betas = locked_params[num_locked_gammas:2*num_locked_gammas]
+        locked_thetas = locked_params[2*num_locked_gammas:]
         
         optimizable_gammas = optimizable_parameters[:num_optimizable_gammas]
-        optimizable_betas = optimizable_parameters[num_optimizable_gammas:]
+        optimizable_betas = optimizable_parameters[num_optimizable_gammas:2*num_optimizable_gammas]
+        optimizable_thetas = optimizable_parameters[2*num_optimizable_gammas:]
         
         # Combine: [locked_gammas, optimizable_gammas, locked_betas, optimizable_betas]
         gamma_values = list(locked_gammas) + list(optimizable_gammas)
         beta_values = list(locked_betas) + list(optimizable_betas)
+        theta_values = list(locked_thetas) + list(optimizable_thetas)
+        
     else:
         # No locking, use parameters as-is
         gamma_values = optimizable_parameters[0:layers]
-        beta_values = optimizable_parameters[layers:]
+        beta_values = optimizable_parameters[layers:2*layers]
+        theta_values = optimizable_parameters[2*layers:]
 
     
-    bound_circuit = bind_qaoa_parameters(circuit, gamma_values, beta_values)
+    bound_circuit = bind_qaoa_parameters(circuit, gamma_values, beta_values, theta_values)
     counts = simulate_large_circuit_in_batches(bound_circuit, batch_size, shots, sim_method, device=device)
     
     bitstrings = list(counts.keys())

@@ -21,10 +21,11 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 import json
+from pathlib import Path
 
 
 # get data for graphs
-curr_prob = '4m_6_1'
+curr_prob = '4m_4_1'
 ttm = get_travel_time_matrix(f'{curr_prob}/ttm.txt')
 address_set = get_address_set(f'{curr_prob}/address-set.txt')
 dirs_mat = get_directions_matrix(f'{curr_prob}/dir-mat.json')
@@ -76,6 +77,11 @@ exploration_strength = 0.1
 batch_size=30
 device='GPU'
 verbose=True
+use_soft_validity = True
+use_local_2q_gates = True
+
+# which experiments to run
+run_expts = [1, 2, 3, 4]
 
 # notes on batch size: 
 '''
@@ -109,135 +115,141 @@ Directed graph doubles number of qubits rel. to undirected graph (num qubits is:
 # =============================================================================
 # Test different warm-start methods to see which performs best
 
-'''
-warm_start_methods = [
-    'nearest_neighbor',      # Original greedy approach
-    'farthest_insertion',    # Build tour by inserting farthest nodes
-    'cheapest_insertion',    # Build tour by cheapest insertion cost
-    'random_nearest_neighbor',  # Randomized greedy
-    'random'                 # Completely random tour
-]
+if 1 in run_expts:
+    warm_start_methods = [
+        'nearest_neighbor',      # Original greedy approach
+        'farthest_insertion',    # Build tour by inserting farthest nodes
+        'cheapest_insertion',    # Build tour by cheapest insertion cost
+        'random_nearest_neighbor',  # Randomized greedy
+        'random'                 # Completely random tour
+    ]
+    
+    
+    for method in warm_start_methods:
+        graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(
+            graph, graphs_dict, runtime_data, 
+            labelled_tt_data, qaoa_progress, 
+            shots=shots, 
+            inv_penalty_m=inv_penalty_m,
+            layers=layers,
+            warm_start=method,
+            exploration_strength=exploration_strength,
+            label=f'QAOA-{method}',
+            initialization_strategy='zero',
+            device=device,
+            use_soft_validity=use_soft_validity,
+            use_local_2q_gates=use_local_2q_gates
+        )
+        print(f'QAOA with {method} warm-start completed')
 
-
-for method in warm_start_methods:
-    graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(
-        graph, graphs_dict, runtime_data, 
-        labelled_tt_data, qaoa_progress, 
-        shots=shots, 
-        inv_penalty_m=inv_penalty_m,
-        layers=layers,
-        warm_start=method,
-        exploration_strength=exploration_strength,
-        label=f'QAOA-{method}',
-        initialization_strategy='zero',
-        device=device
-    )
-    print(f'QAOA with {method} warm-start completed')
-'''
 
 # =============================================================================
 # Example 2: QAOA with quantum pretraining
 # =============================================================================
 # Pre-train the first layer(s) to maximize validity, then optimize for cost
 
-
-print("\n" + "="*70)
-print("PRE-TRAINING QAOA FOR VALIDITY")
-print("="*70)
-
-pretrained_params, validity_rates = pretrain_and_create_initial_params(
-    graph,
-    num_pretrain_layers=3,
-    total_layers=layers,
-    shots=pretrain_shots,
-    batch_size=batch_size,
-    max_iterations=30,
-    use_local_2q_gates=True,
-    verbose=verbose,
-    device=device
-)
-
-print(f"\nPre-training achieved {validity_rates[0]:.2%} validity rate")
-print("Now running full QAOA with pre-trained initialization...\n")
-
-graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(
-    graph, graphs_dict, runtime_data, 
-    labelled_tt_data, qaoa_progress, 
-    shots=shots, 
-    inv_penalty_m=inv_penalty_m,
-    layers=layers,
-    exploration_strength=exploration_strength,
-    warm_start=None,
-    label='QAOA-Pretrained-L3-2Q',
-    custom_initial_params=pretrained_params,
-    use_soft_validity=True,
-    use_local_2q_gates=True,
-    device=device
-)
-print('QAOA with pre-trained layer 0 completed')
+if 2 in run_expts:
+    print("\n" + "="*70)
+    print("PRE-TRAINING QAOA FOR VALIDITY")
+    print("="*70)
+    
+    pretrained_params, validity_rates = pretrain_and_create_initial_params(
+        graph,
+        num_pretrain_layers=3,
+        total_layers=layers,
+        shots=pretrain_shots,
+        batch_size=batch_size,
+        max_iterations=30,
+        use_local_2q_gates=use_local_2q_gates,
+        verbose=verbose,
+        device=device
+    )
+    
+    print(f"\nPre-training achieved {validity_rates[0]:.2%} validity rate")
+    print("Now running full QAOA with pre-trained initialization...\n")
+    
+    graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(
+        graph, graphs_dict, runtime_data, 
+        labelled_tt_data, qaoa_progress, 
+        shots=shots, 
+        inv_penalty_m=inv_penalty_m,
+        layers=layers,
+        exploration_strength=exploration_strength,
+        warm_start=None,
+        label='QAOA-Pretrained-L3-2Q',
+        custom_initial_params=pretrained_params,
+        use_soft_validity=use_soft_validity,
+        use_local_2q_gates=use_local_2q_gates,
+        device=device
+    )
+    print('QAOA with pre-trained layer 0 completed')
 
 
 # =============================================================================
 # Example 3: Combining warm-start AND pretraining
 # =============================================================================
 
-'''
-print("\n" + "="*70)
-print("COMBINING WARM-START AND PRETRAINING")
-print("="*70)
+if 3 in run_expts:
+    print("\n" + "="*70)
+    print("COMBINING WARM-START AND PRETRAINING")
+    print("="*70)
+    
+    # Pre-train with nearest neighbor warm-start
+    pretrained_params, validity_rates = pretrain_and_create_initial_params(
+        graph,
+        num_pretrain_layers=3,
+        total_layers=layers,
+        shots=pretrain_shots,
+        batch_size=batch_size,
+        max_iterations=30,
+        use_local_2q_gates=use_local_2q_gates,
+        verbose=verbose,
+        device=device
+    )
+    
+    graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(
+        graph, graphs_dict, runtime_data, 
+        labelled_tt_data, qaoa_progress, 
+        shots=shots, 
+        inv_penalty_m=inv_penalty_m,
+        layers=layers,
+        warm_start='nearest_neighbor',
+        exploration_strength=exploration_strength,
+        label='QAOA-WS+Pretrained',
+        custom_initial_params=pretrained_params,
+        device=device,
+        use_local_2q_gates = use_local_2q_gates,
+        use_soft_validity=use_soft_validity
+    )
+    print('QAOA with warm-start AND pretraining completed')
 
-# Pre-train with nearest neighbor warm-start
-pretrained_params, validity_rates = pretrain_and_create_initial_params(
-    graph,
-    num_pretrain_layers=1,
-    total_layers=layers,
-    shots=2048,
-    batch_size=8,
-    max_iterations=30,
-    verbose=verbose,
-    device=device
-)
-
-graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(
-    graph, graphs_dict, runtime_data, 
-    labelled_tt_data, qaoa_progress, 
-    shots=shots, 
-    inv_penalty_m=inv_penalty_m,
-    layers=layers,
-    warm_start='nearest_neighbor',
-    exploration_strength=exploration_strength,
-    label='QAOA-WS+Pretrained',
-    custom_initial_params=pretrained_params,
-    device=device
-)
-print('QAOA with warm-start AND pretraining completed')
-'''
 
 # =============================================================================
 # Example 4: Standard QAOA without warm-start or pretraining (baseline)
 # =============================================================================
 
-'''
-graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(
-    graph, graphs_dict, runtime_data, 
-    labelled_tt_data, qaoa_progress, 
-    shots=shots, 
-    inv_penalty_m=inv_penalty_m,
-    layers=layers,
-    exploration_strength=exploration_strength,
-    warm_start=None,
-    label='QAOA-Baseline-2Q',
-    initialization_strategy='zero',
-    use_local_2q_gates=True,
-    device=device
-)
-print('QAOA baseline completed')
-'''
+if 4 in run_expts:
+    graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(
+        graph, graphs_dict, runtime_data, 
+        labelled_tt_data, qaoa_progress, 
+        shots=shots, 
+        inv_penalty_m=inv_penalty_m,
+        layers=layers,
+        exploration_strength=exploration_strength,
+        warm_start=None,
+        label='QAOA-Baseline-2Q',
+        initialization_strategy='zero',
+        use_local_2q_gates=use_local_2q_gates,
+        use_soft_validity=use_soft_validity,
+        device=device
+    )
+    print('QAOA baseline completed')
+
 
 # =============================================================================
 # Visualizations and data saving
 # =============================================================================
-save_all = False
+save_all = True
 
 
 experiment_results = {
@@ -265,6 +277,14 @@ hyperparameters = {
 # =============================================================================
 # NEW: QAOA Comprehensive Progress Plots (individual for each run)
 # =============================================================================
+
+# make results directory safely
+if save_all:
+    dir_path = Path(f'{curr_prob}/results/')
+    dir_path.mkdir(parents=True, exist_ok=True)
+
+
+# get plots
 if qaoa_progress:  # Only if we have QAOA results
     print("\nCreating QAOA comprehensive progress plots...")
     from visualization_algorithms import plot_qaoa_comparison, plot_qaoa_final_comparison_bars

@@ -1,0 +1,1 @@
+{"Brute-Force": [0, 3, 2, 1, 0], "QAOA-nearest_neighbor": [0, 3, 2, 1, 0], "QAOA-farthest_insertion": [0, 3, 2, 1, 0], "QAOA-cheapest_insertion": [0, 3, 2, 1, 0], "QAOA-random_nearest_neighbor": [0, 3, 1, 2, 0], "QAOA-random": [0, 2, 1, 3, 0], "QAOA-Pretrained-L3-2Q": [0, 3, 1, 2, 0], "QAOA-WS+Pretrained": [0, 3, 2, 1, 0], "QAOA-Baseline-2Q": [0, 2, 3, 1, 0]}

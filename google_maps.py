@@ -177,11 +177,11 @@ def make_new_problem(rad, num_pts):
     return True
             
 
-if __name__ == 'main':
+if __name__ == '__main__':
     # FYI this doesnt do anything you have to call make_new_problem() in the console.
     
     rad = 4 # radius in miles to sample from
-    num_pts = 6 # number of points to sample
+    num_pts = 5 # number of points to sample
     if make_new_problem(rad, num_pts) == True:
         print("Problem Created")
     

@@ -1,0 +1,1 @@
+{"Brute-Force": 2095, "Worst-Case": 2527, "QAOA-nearest_neighbor": 2095, "QAOA-farthest_insertion": 2095, "QAOA-cheapest_insertion": 2095, "QAOA-random_nearest_neighbor": 2138, "QAOA-random": 2191, "QAOA-Pretrained-L3-2Q": 2138, "QAOA-WS+Pretrained": 2095, "QAOA-Baseline-2Q": 2514}

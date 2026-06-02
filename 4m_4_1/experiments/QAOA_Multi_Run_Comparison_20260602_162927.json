@@ -1,0 +1,2035 @@
+{
+  "metadata": {
+    "experiment_name": "QAOA_Multi_Run_Comparison",
+    "problem_name": "4m_4_1",
+    "timestamp": "20260602_162927",
+    "datetime": "2026-06-02T16:29:27.710917",
+    "notes": "Comparing multiple QAOA configurations with different warm-starts and pretraining"
+  },
+  "hyperparameters": {
+    "layers": 5,
+    "shots": 10000,
+    "pretrain_shots": 10000,
+    "qubit_batch_size": 30,
+    "inv_penalty_m": 4.5,
+    "warm_start": "ALL",
+    "exploration_strength": 0.1,
+    "initialization_strategy": "zero",
+    "device": "GPU"
+  },
+  "results": {
+    "algorithms": [
+      "Brute-Force",
+      "QAOA-Pretrained-L3-2Q"
+    ],
+    "runtime_data": {
+      "Brute-Force": 3.933906555175781e-05,
+      "QAOA-Pretrained-L3-2Q": 36.758382081985474
+    },
+    "travel_time_data": {
+      "Brute-Force": 2095,
+      "Worst-Case": 2527,
+      "QAOA-Pretrained-L3-2Q": 2138
+    },
+    "tour_graphs": {
+      "Brute-Force": {
+        "nodes": [
+          0,
+          3,
+          2,
+          1
+        ],
+        "edges": [
+          [
+            0,
+            3,
+            {
+              "weight": 55
+            }
+          ],
+          [
+            3,
+            2,
+            {
+              "weight": 465
+            }
+          ],
+          [
+            2,
+            1,
+            {
+              "weight": 824
+            }
+          ],
+          [
+            1,
+            0,
+            {
+              "weight": 751
+            }
+          ]
+        ]
+      },
+      "QAOA-Pretrained-L3-2Q": {
+        "nodes": [
+          0,
+          3,
+          1,
+          2
+        ],
+        "edges": [
+          [
+            0,
+            3,
+            {
+              "weight": 55
+            }
+          ],
+          [
+            3,
+            1,
+            {
+              "weight": 710
+            }
+          ],
+          [
+            1,
+            2,
+            {
+              "weight": 772
+            }
+          ],
+          [
+            2,
+            0,
+            {
+              "weight": 601
+            }
+          ]
+        ]
+      }
+    },
+    "qaoa_progress": {
+      "QAOA-Pretrained-L3-2Q": [
+        {
+          "iteration": 0,
+          "total_shots": 10000,
+          "valid_shots": 44.0,
+          "invalid_shots": 9956.0,
+          "valid_percentage": 0.44,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 582
+        },
+        {
+          "iteration": 1,
+          "total_shots": 10000,
+          "valid_shots": 5.999999999999999,
+          "invalid_shots": 9994.0,
+          "valid_percentage": 0.06,
+          "best_cost": 2191,
+          "best_bitstring": "010001010100",
+          "best_tour": [
+            0,
+            2,
+            1,
+            3,
+            0
+          ],
+          "num_unique_bitstrings": 576
+        },
+        {
+          "iteration": 2,
+          "total_shots": 10000,
+          "valid_shots": 1.0,
+          "invalid_shots": 9999.0,
+          "valid_percentage": 0.01,
+          "best_cost": 2215,
+          "best_bitstring": "100010001100",
+          "best_tour": [
+            0,
+            1,
+            2,
+            3,
+            0
+          ],
+          "num_unique_bitstrings": 554
+        },
+        {
+          "iteration": 3,
+          "total_shots": 10000,
+          "valid_shots": 42.0,
+          "invalid_shots": 9958.0,
+          "valid_percentage": 0.42,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 597
+        },
+        {
+          "iteration": 4,
+          "total_shots": 10000,
+          "valid_shots": 52.0,
+          "invalid_shots": 9948.0,
+          "valid_percentage": 0.52,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 597
+        },
+        {
+          "iteration": 5,
+          "total_shots": 10000,
+          "valid_shots": 37.0,
+          "invalid_shots": 9963.0,
+          "valid_percentage": 0.37,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 606
+        },
+        {
+          "iteration": 6,
+          "total_shots": 10000,
+          "valid_shots": 1.0,
+          "invalid_shots": 9999.0,
+          "valid_percentage": 0.01,
+          "best_cost": 2191,
+          "best_bitstring": "010001010100",
+          "best_tour": [
+            0,
+            2,
+            1,
+            3,
+            0
+          ],
+          "num_unique_bitstrings": 757
+        },
+        {
+          "iteration": 7,
+          "total_shots": 10000,
+          "valid_shots": 2.0,
+          "invalid_shots": 9998.0,
+          "valid_percentage": 0.02,
+          "best_cost": 2191,
+          "best_bitstring": "010001010100",
+          "best_tour": [
+            0,
+            2,
+            1,
+            3,
+            0
+          ],
+          "num_unique_bitstrings": 1427
+        },
+        {
+          "iteration": 8,
+          "total_shots": 10000,
+          "valid_shots": 8.0,
+          "invalid_shots": 9992.0,
+          "valid_percentage": 0.08,
+          "best_cost": 2514,
+          "best_bitstring": "010100001010",
+          "best_tour": [
+            0,
+            2,
+            3,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1205
+        },
+        {
+          "iteration": 9,
+          "total_shots": 10000,
+          "valid_shots": 9.0,
+          "invalid_shots": 9991.0,
+          "valid_percentage": 0.09,
+          "best_cost": 2514,
+          "best_bitstring": "010100001010",
+          "best_tour": [
+            0,
+            2,
+            3,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1189
+        },
+        {
+          "iteration": 10,
+          "total_shots": 10000,
+          "valid_shots": 4.0,
+          "invalid_shots": 9996.0,
+          "valid_percentage": 0.04,
+          "best_cost": 2514,
+          "best_bitstring": "010100001010",
+          "best_tour": [
+            0,
+            2,
+            3,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1199
+        },
+        {
+          "iteration": 11,
+          "total_shots": 10000,
+          "valid_shots": 7.0,
+          "invalid_shots": 9993.0,
+          "valid_percentage": 0.06999999999999999,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 1128
+        },
+        {
+          "iteration": 12,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 1022
+        },
+        {
+          "iteration": 13,
+          "total_shots": 10000,
+          "valid_shots": 73.0,
+          "invalid_shots": 9927.0,
+          "valid_percentage": 0.73,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 639
+        },
+        {
+          "iteration": 14,
+          "total_shots": 10000,
+          "valid_shots": 60.0,
+          "invalid_shots": 9940.0,
+          "valid_percentage": 0.6,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 607
+        },
+        {
+          "iteration": 15,
+          "total_shots": 10000,
+          "valid_shots": 43.0,
+          "invalid_shots": 9957.0,
+          "valid_percentage": 0.43,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 614
+        },
+        {
+          "iteration": 16,
+          "total_shots": 10000,
+          "valid_shots": 2.0,
+          "invalid_shots": 9998.0,
+          "valid_percentage": 0.02,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 844
+        },
+        {
+          "iteration": 17,
+          "total_shots": 10000,
+          "valid_shots": 1.0,
+          "invalid_shots": 9999.0,
+          "valid_percentage": 0.01,
+          "best_cost": 2191,
+          "best_bitstring": "010001010100",
+          "best_tour": [
+            0,
+            2,
+            1,
+            3,
+            0
+          ],
+          "num_unique_bitstrings": 521
+        },
+        {
+          "iteration": 18,
+          "total_shots": 10000,
+          "valid_shots": 20.0,
+          "invalid_shots": 9980.0,
+          "valid_percentage": 0.2,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1920
+        },
+        {
+          "iteration": 19,
+          "total_shots": 10000,
+          "valid_shots": 5.999999999999999,
+          "invalid_shots": 9994.0,
+          "valid_percentage": 0.06,
+          "best_cost": 2191,
+          "best_bitstring": "010001010100",
+          "best_tour": [
+            0,
+            2,
+            1,
+            3,
+            0
+          ],
+          "num_unique_bitstrings": 1554
+        },
+        {
+          "iteration": 20,
+          "total_shots": 10000,
+          "valid_shots": 2.9999999999999996,
+          "invalid_shots": 9997.0,
+          "valid_percentage": 0.03,
+          "best_cost": 2191,
+          "best_bitstring": "010001010100",
+          "best_tour": [
+            0,
+            2,
+            1,
+            3,
+            0
+          ],
+          "num_unique_bitstrings": 1499
+        },
+        {
+          "iteration": 21,
+          "total_shots": 10000,
+          "valid_shots": 2.9999999999999996,
+          "invalid_shots": 9997.0,
+          "valid_percentage": 0.03,
+          "best_cost": 2215,
+          "best_bitstring": "100010001100",
+          "best_tour": [
+            0,
+            1,
+            2,
+            3,
+            0
+          ],
+          "num_unique_bitstrings": 601
+        },
+        {
+          "iteration": 22,
+          "total_shots": 10000,
+          "valid_shots": 43.0,
+          "invalid_shots": 9957.0,
+          "valid_percentage": 0.43,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 616
+        },
+        {
+          "iteration": 23,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 608
+        },
+        {
+          "iteration": 24,
+          "total_shots": 10000,
+          "valid_shots": 54.0,
+          "invalid_shots": 9946.0,
+          "valid_percentage": 0.54,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 642
+        },
+        {
+          "iteration": 25,
+          "total_shots": 10000,
+          "valid_shots": 7.0,
+          "invalid_shots": 9993.0,
+          "valid_percentage": 0.06999999999999999,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 508
+        },
+        {
+          "iteration": 26,
+          "total_shots": 10000,
+          "valid_shots": 4.0,
+          "invalid_shots": 9996.0,
+          "valid_percentage": 0.04,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 808
+        },
+        {
+          "iteration": 27,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 670
+        },
+        {
+          "iteration": 28,
+          "total_shots": 10000,
+          "valid_shots": 203.0,
+          "invalid_shots": 9797.0,
+          "valid_percentage": 2.03,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 475
+        },
+        {
+          "iteration": 29,
+          "total_shots": 10000,
+          "valid_shots": 11.0,
+          "invalid_shots": 9989.0,
+          "valid_percentage": 0.11,
+          "best_cost": 2191,
+          "best_bitstring": "010001010100",
+          "best_tour": [
+            0,
+            2,
+            1,
+            3,
+            0
+          ],
+          "num_unique_bitstrings": 843
+        },
+        {
+          "iteration": 30,
+          "total_shots": 10000,
+          "valid_shots": 2.9999999999999996,
+          "invalid_shots": 9997.0,
+          "valid_percentage": 0.03,
+          "best_cost": 2514,
+          "best_bitstring": "010100001010",
+          "best_tour": [
+            0,
+            2,
+            3,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 884
+        },
+        {
+          "iteration": 31,
+          "total_shots": 10000,
+          "valid_shots": 2.9999999999999996,
+          "invalid_shots": 9997.0,
+          "valid_percentage": 0.03,
+          "best_cost": 2215,
+          "best_bitstring": "100010001100",
+          "best_tour": [
+            0,
+            1,
+            2,
+            3,
+            0
+          ],
+          "num_unique_bitstrings": 829
+        },
+        {
+          "iteration": 32,
+          "total_shots": 10000,
+          "valid_shots": 1.0,
+          "invalid_shots": 9999.0,
+          "valid_percentage": 0.01,
+          "best_cost": 2514,
+          "best_bitstring": "010100001010",
+          "best_tour": [
+            0,
+            2,
+            3,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1016
+        },
+        {
+          "iteration": 33,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 751
+        },
+        {
+          "iteration": 34,
+          "total_shots": 10000,
+          "valid_shots": 44.0,
+          "invalid_shots": 9956.0,
+          "valid_percentage": 0.44,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 609
+        },
+        {
+          "iteration": 35,
+          "total_shots": 10000,
+          "valid_shots": 1.0,
+          "invalid_shots": 9999.0,
+          "valid_percentage": 0.01,
+          "best_cost": 2514,
+          "best_bitstring": "010100001010",
+          "best_tour": [
+            0,
+            2,
+            3,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 670
+        },
+        {
+          "iteration": 36,
+          "total_shots": 10000,
+          "valid_shots": 47.0,
+          "invalid_shots": 9953.0,
+          "valid_percentage": 0.47000000000000003,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 613
+        },
+        {
+          "iteration": 37,
+          "total_shots": 10000,
+          "valid_shots": 74.0,
+          "invalid_shots": 9926.0,
+          "valid_percentage": 0.74,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 604
+        },
+        {
+          "iteration": 38,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 701
+        },
+        {
+          "iteration": 39,
+          "total_shots": 10000,
+          "valid_shots": 11.999999999999998,
+          "invalid_shots": 9988.0,
+          "valid_percentage": 0.12,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 504
+        },
+        {
+          "iteration": 40,
+          "total_shots": 10000,
+          "valid_shots": 2.0,
+          "invalid_shots": 9998.0,
+          "valid_percentage": 0.02,
+          "best_cost": 2215,
+          "best_bitstring": "100010001100",
+          "best_tour": [
+            0,
+            1,
+            2,
+            3,
+            0
+          ],
+          "num_unique_bitstrings": 1057
+        },
+        {
+          "iteration": 41,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 371
+        },
+        {
+          "iteration": 42,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 521
+        },
+        {
+          "iteration": 43,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 589
+        },
+        {
+          "iteration": 44,
+          "total_shots": 10000,
+          "valid_shots": 4.0,
+          "invalid_shots": 9996.0,
+          "valid_percentage": 0.04,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 784
+        },
+        {
+          "iteration": 45,
+          "total_shots": 10000,
+          "valid_shots": 11.0,
+          "invalid_shots": 9989.0,
+          "valid_percentage": 0.11,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1187
+        },
+        {
+          "iteration": 46,
+          "total_shots": 10000,
+          "valid_shots": 47.0,
+          "invalid_shots": 9953.0,
+          "valid_percentage": 0.47000000000000003,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 595
+        },
+        {
+          "iteration": 47,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 356
+        },
+        {
+          "iteration": 48,
+          "total_shots": 10000,
+          "valid_shots": 160.0,
+          "invalid_shots": 9840.0,
+          "valid_percentage": 1.6,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 479
+        },
+        {
+          "iteration": 49,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 967
+        },
+        {
+          "iteration": 50,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 734
+        },
+        {
+          "iteration": 51,
+          "total_shots": 10000,
+          "valid_shots": 1.0,
+          "invalid_shots": 9999.0,
+          "valid_percentage": 0.01,
+          "best_cost": 2514,
+          "best_bitstring": "010100001010",
+          "best_tour": [
+            0,
+            2,
+            3,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1097
+        },
+        {
+          "iteration": 52,
+          "total_shots": 10000,
+          "valid_shots": 2.9999999999999996,
+          "invalid_shots": 9997.0,
+          "valid_percentage": 0.03,
+          "best_cost": 2514,
+          "best_bitstring": "010100001010",
+          "best_tour": [
+            0,
+            2,
+            3,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 990
+        },
+        {
+          "iteration": 53,
+          "total_shots": 10000,
+          "valid_shots": 104.0,
+          "invalid_shots": 9896.0,
+          "valid_percentage": 1.04,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 618
+        },
+        {
+          "iteration": 54,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 679
+        },
+        {
+          "iteration": 55,
+          "total_shots": 10000,
+          "valid_shots": 7.0,
+          "invalid_shots": 9993.0,
+          "valid_percentage": 0.06999999999999999,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1273
+        },
+        {
+          "iteration": 56,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 627
+        },
+        {
+          "iteration": 57,
+          "total_shots": 10000,
+          "valid_shots": 128.0,
+          "invalid_shots": 9872.0,
+          "valid_percentage": 1.28,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 530
+        },
+        {
+          "iteration": 58,
+          "total_shots": 10000,
+          "valid_shots": 13.0,
+          "invalid_shots": 9987.0,
+          "valid_percentage": 0.13,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1319
+        },
+        {
+          "iteration": 59,
+          "total_shots": 10000,
+          "valid_shots": 36.0,
+          "invalid_shots": 9964.0,
+          "valid_percentage": 0.36,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 546
+        },
+        {
+          "iteration": 60,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 575
+        },
+        {
+          "iteration": 61,
+          "total_shots": 10000,
+          "valid_shots": 66.0,
+          "invalid_shots": 9934.0,
+          "valid_percentage": 0.66,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 689
+        },
+        {
+          "iteration": 62,
+          "total_shots": 10000,
+          "valid_shots": 16.0,
+          "invalid_shots": 9984.0,
+          "valid_percentage": 0.16,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 808
+        },
+        {
+          "iteration": 63,
+          "total_shots": 10000,
+          "valid_shots": 103.0,
+          "invalid_shots": 9897.0,
+          "valid_percentage": 1.03,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 601
+        },
+        {
+          "iteration": 64,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 617
+        },
+        {
+          "iteration": 65,
+          "total_shots": 10000,
+          "valid_shots": 47.99999999999999,
+          "invalid_shots": 9952.0,
+          "valid_percentage": 0.48,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 592
+        },
+        {
+          "iteration": 66,
+          "total_shots": 10000,
+          "valid_shots": 0.0,
+          "invalid_shots": 10000.0,
+          "valid_percentage": 0.0,
+          "best_cost": Infinity,
+          "best_bitstring": null,
+          "best_tour": [],
+          "num_unique_bitstrings": 613
+        },
+        {
+          "iteration": 67,
+          "total_shots": 10000,
+          "valid_shots": 2.0,
+          "invalid_shots": 9998.0,
+          "valid_percentage": 0.02,
+          "best_cost": 2514,
+          "best_bitstring": "010100001010",
+          "best_tour": [
+            0,
+            2,
+            3,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 675
+        },
+        {
+          "iteration": 68,
+          "total_shots": 10000,
+          "valid_shots": 1.0,
+          "invalid_shots": 9999.0,
+          "valid_percentage": 0.01,
+          "best_cost": 2215,
+          "best_bitstring": "100010001100",
+          "best_tour": [
+            0,
+            1,
+            2,
+            3,
+            0
+          ],
+          "num_unique_bitstrings": 1045
+        },
+        {
+          "iteration": 69,
+          "total_shots": 10000,
+          "valid_shots": 21.0,
+          "invalid_shots": 9979.0,
+          "valid_percentage": 0.21,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1782
+        },
+        {
+          "iteration": 70,
+          "total_shots": 10000,
+          "valid_shots": 19.0,
+          "invalid_shots": 9981.0,
+          "valid_percentage": 0.19,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1108
+        },
+        {
+          "iteration": 71,
+          "total_shots": 10000,
+          "valid_shots": 53.0,
+          "invalid_shots": 9947.0,
+          "valid_percentage": 0.53,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 467
+        },
+        {
+          "iteration": 72,
+          "total_shots": 10000,
+          "valid_shots": 31.0,
+          "invalid_shots": 9969.0,
+          "valid_percentage": 0.31,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 615
+        },
+        {
+          "iteration": 73,
+          "total_shots": 10000,
+          "valid_shots": 38.0,
+          "invalid_shots": 9962.0,
+          "valid_percentage": 0.38,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 653
+        },
+        {
+          "iteration": 74,
+          "total_shots": 10000,
+          "valid_shots": 39.0,
+          "invalid_shots": 9961.0,
+          "valid_percentage": 0.38999999999999996,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 567
+        },
+        {
+          "iteration": 75,
+          "total_shots": 10000,
+          "valid_shots": 117.0,
+          "invalid_shots": 9883.0,
+          "valid_percentage": 1.17,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 472
+        },
+        {
+          "iteration": 76,
+          "total_shots": 10000,
+          "valid_shots": 32.0,
+          "invalid_shots": 9968.0,
+          "valid_percentage": 0.32,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 605
+        },
+        {
+          "iteration": 77,
+          "total_shots": 10000,
+          "valid_shots": 9.0,
+          "invalid_shots": 9991.0,
+          "valid_percentage": 0.09,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1297
+        },
+        {
+          "iteration": 78,
+          "total_shots": 10000,
+          "valid_shots": 35.0,
+          "invalid_shots": 9965.0,
+          "valid_percentage": 0.35000000000000003,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 589
+        },
+        {
+          "iteration": 79,
+          "total_shots": 10000,
+          "valid_shots": 57.99999999999999,
+          "invalid_shots": 9942.0,
+          "valid_percentage": 0.58,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 521
+        },
+        {
+          "iteration": 80,
+          "total_shots": 10000,
+          "valid_shots": 45.0,
+          "invalid_shots": 9955.0,
+          "valid_percentage": 0.44999999999999996,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 600
+        },
+        {
+          "iteration": 81,
+          "total_shots": 10000,
+          "valid_shots": 46.0,
+          "invalid_shots": 9954.0,
+          "valid_percentage": 0.45999999999999996,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 577
+        },
+        {
+          "iteration": 82,
+          "total_shots": 10000,
+          "valid_shots": 34.0,
+          "invalid_shots": 9966.0,
+          "valid_percentage": 0.33999999999999997,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 593
+        },
+        {
+          "iteration": 83,
+          "total_shots": 10000,
+          "valid_shots": 15.0,
+          "invalid_shots": 9985.0,
+          "valid_percentage": 0.15,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 764
+        },
+        {
+          "iteration": 84,
+          "total_shots": 10000,
+          "valid_shots": 31.0,
+          "invalid_shots": 9969.0,
+          "valid_percentage": 0.31,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 609
+        },
+        {
+          "iteration": 85,
+          "total_shots": 10000,
+          "valid_shots": 30.0,
+          "invalid_shots": 9970.0,
+          "valid_percentage": 0.3,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1042
+        },
+        {
+          "iteration": 86,
+          "total_shots": 10000,
+          "valid_shots": 33.0,
+          "invalid_shots": 9967.0,
+          "valid_percentage": 0.33,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 616
+        },
+        {
+          "iteration": 87,
+          "total_shots": 10000,
+          "valid_shots": 14.0,
+          "invalid_shots": 9986.0,
+          "valid_percentage": 0.13999999999999999,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1405
+        },
+        {
+          "iteration": 88,
+          "total_shots": 10000,
+          "valid_shots": 41.0,
+          "invalid_shots": 9959.0,
+          "valid_percentage": 0.41000000000000003,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 625
+        },
+        {
+          "iteration": 89,
+          "total_shots": 10000,
+          "valid_shots": 11.999999999999998,
+          "invalid_shots": 9988.0,
+          "valid_percentage": 0.12,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 760
+        },
+        {
+          "iteration": 90,
+          "total_shots": 10000,
+          "valid_shots": 36.0,
+          "invalid_shots": 9964.0,
+          "valid_percentage": 0.36,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 1054
+        },
+        {
+          "iteration": 91,
+          "total_shots": 10000,
+          "valid_shots": 36.0,
+          "invalid_shots": 9964.0,
+          "valid_percentage": 0.36,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 583
+        },
+        {
+          "iteration": 92,
+          "total_shots": 10000,
+          "valid_shots": 100.0,
+          "invalid_shots": 9900.0,
+          "valid_percentage": 1.0,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 499
+        },
+        {
+          "iteration": 93,
+          "total_shots": 10000,
+          "valid_shots": 28.999999999999996,
+          "invalid_shots": 9971.0,
+          "valid_percentage": 0.29,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 612
+        },
+        {
+          "iteration": 94,
+          "total_shots": 10000,
+          "valid_shots": 41.0,
+          "invalid_shots": 9959.0,
+          "valid_percentage": 0.41000000000000003,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 593
+        },
+        {
+          "iteration": 95,
+          "total_shots": 10000,
+          "valid_shots": 38.0,
+          "invalid_shots": 9962.0,
+          "valid_percentage": 0.38,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 650
+        },
+        {
+          "iteration": 96,
+          "total_shots": 10000,
+          "valid_shots": 31.0,
+          "invalid_shots": 9969.0,
+          "valid_percentage": 0.31,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 606
+        },
+        {
+          "iteration": 97,
+          "total_shots": 10000,
+          "valid_shots": 32.0,
+          "invalid_shots": 9968.0,
+          "valid_percentage": 0.32,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 602
+        },
+        {
+          "iteration": 98,
+          "total_shots": 10000,
+          "valid_shots": 35.0,
+          "invalid_shots": 9965.0,
+          "valid_percentage": 0.35000000000000003,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 594
+        },
+        {
+          "iteration": 99,
+          "total_shots": 10000,
+          "valid_shots": 51.00000000000001,
+          "invalid_shots": 9949.0,
+          "valid_percentage": 0.51,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 550
+        },
+        {
+          "iteration": 100,
+          "total_shots": 10000,
+          "valid_shots": 37.0,
+          "invalid_shots": 9963.0,
+          "valid_percentage": 0.37,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 584
+        },
+        {
+          "iteration": 101,
+          "total_shots": 10000,
+          "valid_shots": 34.0,
+          "invalid_shots": 9966.0,
+          "valid_percentage": 0.33999999999999997,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 628
+        },
+        {
+          "iteration": 102,
+          "total_shots": 10000,
+          "valid_shots": 42.0,
+          "invalid_shots": 9958.0,
+          "valid_percentage": 0.42,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 597
+        },
+        {
+          "iteration": 103,
+          "total_shots": 10000,
+          "valid_shots": 37.0,
+          "invalid_shots": 9963.0,
+          "valid_percentage": 0.37,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 596
+        },
+        {
+          "iteration": 104,
+          "total_shots": 10000,
+          "valid_shots": 56.0,
+          "invalid_shots": 9944.0,
+          "valid_percentage": 0.5599999999999999,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 581
+        },
+        {
+          "iteration": 105,
+          "total_shots": 10000,
+          "valid_shots": 47.0,
+          "invalid_shots": 9953.0,
+          "valid_percentage": 0.47000000000000003,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 631
+        },
+        {
+          "iteration": 106,
+          "total_shots": 10000,
+          "valid_shots": 32.0,
+          "invalid_shots": 9968.0,
+          "valid_percentage": 0.32,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 594
+        },
+        {
+          "iteration": 107,
+          "total_shots": 10000,
+          "valid_shots": 43.0,
+          "invalid_shots": 9957.0,
+          "valid_percentage": 0.43,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 599
+        },
+        {
+          "iteration": 108,
+          "total_shots": 10000,
+          "valid_shots": 34.0,
+          "invalid_shots": 9966.0,
+          "valid_percentage": 0.33999999999999997,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 551
+        },
+        {
+          "iteration": 109,
+          "total_shots": 10000,
+          "valid_shots": 38.0,
+          "invalid_shots": 9962.0,
+          "valid_percentage": 0.38,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 594
+        },
+        {
+          "iteration": 110,
+          "total_shots": 10000,
+          "valid_shots": 57.0,
+          "invalid_shots": 9943.0,
+          "valid_percentage": 0.5700000000000001,
+          "best_cost": 2095,
+          "best_bitstring": "001100010001",
+          "best_tour": [
+            0,
+            3,
+            2,
+            1,
+            0
+          ],
+          "num_unique_bitstrings": 637
+        },
+        {
+          "iteration": 111,
+          "total_shots": 10000,
+          "valid_shots": 36.0,
+          "invalid_shots": 9964.0,
+          "valid_percentage": 0.36,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 570
+        },
+        {
+          "iteration": 112,
+          "total_shots": 10000,
+          "valid_shots": 35.0,
+          "invalid_shots": 9965.0,
+          "valid_percentage": 0.35000000000000003,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 600
+        },
+        {
+          "iteration": 113,
+          "total_shots": 10000,
+          "valid_shots": 35.0,
+          "invalid_shots": 9965.0,
+          "valid_percentage": 0.35000000000000003,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 609
+        },
+        {
+          "iteration": 114,
+          "total_shots": 10000,
+          "valid_shots": 36.0,
+          "invalid_shots": 9964.0,
+          "valid_percentage": 0.36,
+          "best_cost": 2138,
+          "best_bitstring": "001010100010",
+          "best_tour": [
+            0,
+            3,
+            1,
+            2,
+            0
+          ],
+          "num_unique_bitstrings": 574
+        }
+      ]
+    },
+    "qaoa_summary": {
+      "QAOA-Pretrained-L3-2Q": {
+        "num_iterations": 115,
+        "final_validity_pct": 0.36,
+        "final_best_cost": 2138,
+        "initial_cost": 2095,
+        "improvement_pct": -2.052505966587112,
+        "avg_validity_pct": 0.3012173913043478,
+        "avg_diversity": 745.0260869565218,
+        "max_validity_pct": 2.03,
+        "min_cost": 2095
+      }
+    },
+    "num_valid_tours": 6,
+    "example_valid_tours": [
+      [
+        0,
+        1,
+        2,
+        3,
+        0
+      ],
+      [
+        0,
+        1,
+        3,
+        2,
+        0
+      ],
+      [
+        0,
+        2,
+        1,
+        3,
+        0
+      ],
+      [
+        0,
+        2,
+        3,
+        1,
+        0
+      ],
+      [
+        0,
+        3,
+        1,
+        2,
+        0
+      ]
+    ],
+    "brute_force_statistics": {
+      "num_tours": 6,
+      "min": 2095.0,
+      "max": 2527.0,
+      "mean": 2280.0,
+      "median": 2203.0,
+      "std": 174.30815624443204
+    }
+  }
+}

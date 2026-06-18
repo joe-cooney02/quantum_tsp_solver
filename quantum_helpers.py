@@ -1295,4 +1295,388 @@ def bitstring_to_tour(bitstring, qubit_to_edge_map):
     return extract_tour_from_edges(selected_edges)
 
 
+# =============================================================================
+# Multi-order gate infrastructure (added for gate-order hyperparameter tuning)
+#
+# Generalizes the binary use_local_2q_gates flag into an arbitrary list of
+# gate "orders" (k-qubit entangling gates), with ONE shared parameter per
+# order per layer (not one parameter per individual gate). This is a
+# deliberate choice based on the symmetry of the validity constraint: since
+# the TSP one-hot/permutation validity check doesn't depend on edge weights,
+# qubits playing equivalent structural roles are in the same symmetry orbit,
+# so tying their parameters together loses little-to-no expressivity for the
+# validity objective while keeping the parameter count (and thus shot budget)
+# from exploding. See create_multi_order_qaoa_circuit for details.
+# =============================================================================
+ 
+def _apply_parity_ladder_gate(qc, qubits, theta_param):
+    """
+    Apply a k-qubit Pauli-Z-string rotation exp(-i*theta * Z_q0 Z_q1 ... Z_q(k-1))
+    using the standard CNOT-staircase ("parity ladder") construction.
+ 
+    This is the natural generalization of a single-qubit RZ (k=1, no CNOTs needed)
+    up to an arbitrary k-qubit entangling phase gate. For k=2 this is the
+    standard two-qubit ZZ-interaction gate.
+ 
+    Parameters
+    ----------
+    qc : QuantumCircuit
+        Circuit to append the gate to (modified in place).
+    qubits : list of int
+        Qubit indices the gate acts on. Order matters only for the CNOT
+        ladder construction, not for the resulting operator.
+    theta_param : Parameter or float
+        Rotation angle (shared across all gates of this order/layer).
+    """
+    k = len(qubits)
+ 
+    if k == 1:
+        qc.rz(2 * theta_param, qubits[0])
+        return
+ 
+    # Compute parity of qubits[0..k-2] onto qubits[k-1]
+    for i in range(k - 1):
+        qc.cx(qubits[i], qubits[i + 1])
+ 
+    qc.rz(2 * theta_param, qubits[-1])
+ 
+    # Uncompute parity
+    for i in range(k - 2, -1, -1):
+        qc.cx(qubits[i], qubits[i + 1])
+ 
+ 
+def estimate_gate_count(gate_orders, num_qubits, batch_size, num_layers=1):
+    """
+    Estimate the number of multi-qubit entangling gates a multi-order circuit
+    will contain, before building it. Useful for sanity-checking a hyperparameter
+    sweep configuration, since the number of k-qubit groups per batch grows
+    combinatorially (C(batch_size, k)).
+ 
+    Parameters
+    ----------
+    gate_orders : list of int
+        Gate orders to be used (1 through num_qubits).
+    num_qubits : int
+        Total number of qubits in the problem.
+    batch_size : int
+        Simulation batch size (a k-qubit gate must fit within one batch).
+    num_layers : int, optional
+        Number of QAOA layers.
+ 
+    Returns
+    -------
+    dict: {order: total_gate_count_across_all_layers, ...}, plus 'total' key.
+    """
+    from math import comb
+ 
+    num_batches = (num_qubits + batch_size - 1) // batch_size
+    counts = {}
+ 
+    for k in sorted(set(int(o) for o in gate_orders)):
+        per_layer = 0
+        for batch_idx in range(num_batches):
+            start_qubit = batch_idx * batch_size
+            end_qubit = min(start_qubit + batch_size, num_qubits)
+            batch_qubits = end_qubit - start_qubit
+            if batch_qubits >= k:
+                per_layer += comb(batch_qubits, k) if k > 1 else batch_qubits
+        counts[k] = per_layer * num_layers
+ 
+    counts['total'] = sum(counts.values())
+    return counts
+ 
+ 
+def create_multi_order_qaoa_circuit(G, qubit_to_edge_map, gate_orders, num_layers=1,
+                                    barriers=False, warm_start_tour=None,
+                                    exploration_strength=0.2, batch_size=8):
+    """
+    Create a QAOA circuit generalizing create_tsp_qaoa_circuit's single
+    use_local_2q_gates flag into an arbitrary set of entangling-gate orders.
+ 
+    For each layer, applies (in order): the standard weighted cost RZ layer
+    (gamma), then for every order k in gate_orders, a k-qubit parity-ladder
+    entangling gate (see _apply_parity_ladder_gate) applied to every group of
+    k qubits within each simulation batch, sharing ONE parameter theta_k per
+    layer across all groups of that order. Finally the standard RX mixer
+    (beta) is applied.
+ 
+    Parameters
+    ----------
+    G : networkx.DiGraph
+        TSP graph with weighted edges.
+    qubit_to_edge_map : dict
+        Mapping from qubit index to edge tuple.
+    gate_orders : list of int
+        Which gate orders (k-qubit entangling blocks) to include in every
+        layer, each in [1, num_qubits]. E.g. [1] = single-qubit phase only,
+        [2] = pairwise entangling (like use_local_2q_gates=True), [1,3,6] =
+        combination of single, triple, and six-qubit entanglers.
+    num_layers : int, optional
+        Number of QAOA layers (p).
+    barriers : bool, optional
+        Whether to add barriers (don't use if you intend to split the circuit).
+    warm_start_tour : list, optional
+        Initial tour to warm-start from.
+    exploration_strength : float, optional
+        Perturbation strength when warm-starting.
+    batch_size : int, optional
+        Simulation batch size. Every k-qubit gate is confined to a single
+        batch so the circuit remains splittable via
+        simulate_large_circuit_in_batches. Consequently max(gate_orders)
+        must be <= batch_size.
+ 
+    Returns
+    -------
+    QuantumCircuit: Parameterized circuit with one Parameter per (order, layer)
+        named 'theta_order{k}_{layer}', plus the usual 'gamma_{layer}' and
+        'beta_{layer}' parameters.
+ 
+    Raises
+    ------
+    ValueError: if any requested order is < 1, exceeds num_qubits, or exceeds
+        batch_size (a k-qubit gate cannot span multiple batches).
+    """
+    num_qubits = len(qubit_to_edge_map)
+ 
+    gate_orders = sorted(set(int(k) for k in gate_orders))
+ 
+    if any(k < 1 for k in gate_orders):
+        raise ValueError("All gate_orders must be >= 1.")
+    if max(gate_orders) > num_qubits:
+        raise ValueError(
+            f"gate_orders contains order {max(gate_orders)}, which exceeds "
+            f"the number of qubits ({num_qubits})."
+        )
+    if max(gate_orders) > batch_size:
+        raise ValueError(
+            f"gate_orders contains order {max(gate_orders)}, which exceeds "
+            f"batch_size ({batch_size}). A k-qubit gate must fit entirely "
+            f"within one simulation batch to remain compatible with "
+            f"simulate_large_circuit_in_batches. Increase batch_size to at "
+            f"least {max(gate_orders)} to test this order (note: this also "
+            f"increases simulation cost for that batch)."
+        )
+ 
+    qc = QuantumCircuit(num_qubits, num_qubits)
+ 
+    gamma_params = [Parameter(f'gamma_{i}') for i in range(num_layers)]
+    beta_params = [Parameter(f'beta_{i}') for i in range(num_layers)]
+    order_params = {
+        k: [Parameter(f'theta_order{k}_{i}') for i in range(num_layers)]
+        for k in gate_orders
+    }
+ 
+    # Initial state
+    if warm_start_tour is not None:
+        edge_to_qubit = {edge: qubit for qubit, edge in qubit_to_edge_map.items()}
+        for i in range(len(warm_start_tour) - 1):
+            edge = (warm_start_tour[i], warm_start_tour[i + 1])
+            if edge in edge_to_qubit:
+                qc.x(edge_to_qubit[edge])
+        for qubit_idx in range(num_qubits):
+            qc.ry(exploration_strength, qubit_idx)
+    else:
+        qc.h(range(num_qubits))
+ 
+    if barriers:
+        qc.barrier()
+ 
+    num_batches = (num_qubits + batch_size - 1) // batch_size
+ 
+    for layer in range(num_layers):
+        # Cost Hamiltonian (same as create_tsp_qaoa_circuit)
+        for qubit_idx, edge in qubit_to_edge_map.items():
+            u, v = edge
+            if G.has_edge(u, v):
+                weight = G[u][v]['weight']
+                qc.rz(2 * gamma_params[layer] * weight, qubit_idx)
+ 
+        # Multi-order entangling gates: one shared parameter per order per layer
+        for k in gate_orders:
+            theta_k = order_params[k][layer]
+            for batch_idx in range(num_batches):
+                start_qubit = batch_idx * batch_size
+                end_qubit = min(start_qubit + batch_size, num_qubits)
+                qubits_in_batch = list(range(start_qubit, end_qubit))
+ 
+                if len(qubits_in_batch) < k:
+                    continue
+ 
+                if k == 1:
+                    for q in qubits_in_batch:
+                        _apply_parity_ladder_gate(qc, [q], theta_k)
+                else:
+                    for group in it.combinations(qubits_in_batch, k):
+                        _apply_parity_ladder_gate(qc, list(group), theta_k)
+ 
+        if barriers:
+            qc.barrier()
+ 
+        # Mixer Hamiltonian
+        for qubit_idx in range(num_qubits):
+            qc.rx(2 * beta_params[layer], qubit_idx)
+ 
+        if barriers:
+            qc.barrier()
+ 
+    for i in range(num_qubits):
+        qc.measure(i, i)
+ 
+    return qc
+ 
+ 
+def bind_multi_order_parameters(circuit, gamma_values, beta_values, theta_values_by_order):
+    """
+    Bind parameter values to a circuit built with create_multi_order_qaoa_circuit.
+ 
+    Parameters
+    ----------
+    circuit : QuantumCircuit
+        Circuit produced by create_multi_order_qaoa_circuit.
+    gamma_values : list or array
+        One value per layer.
+    beta_values : list or array
+        One value per layer.
+    theta_values_by_order : dict
+        {order_k: [theta values, one per layer], ...}
+ 
+    Returns
+    -------
+    QuantumCircuit: Circuit with all parameters bound.
+    """
+    num_layers = len(gamma_values)
+ 
+    param_dict = {}
+    for i in range(num_layers):
+        param_dict[f'gamma_{i}'] = gamma_values[i]
+        param_dict[f'beta_{i}'] = beta_values[i]
+ 
+    for k, theta_values in theta_values_by_order.items():
+        for i in range(num_layers):
+            param_dict[f'theta_order{k}_{i}'] = theta_values[i]
+ 
+    return circuit.assign_parameters(param_dict)
+ 
+ 
+def get_multi_order_initial_parameters(num_layers, gate_orders, strategy='random'):
+    """
+    Generate initial parameter values for a multi-order QAOA circuit.
+ 
+    Parameters
+    ----------
+    num_layers : int
+    gate_orders : list of int
+    strategy : str, optional
+        'random' or 'zero'.
+ 
+    Returns
+    -------
+    tuple: (gamma_values, beta_values, theta_values_by_order)
+    """
+    gate_orders = sorted(set(int(k) for k in gate_orders))
+ 
+    if strategy == 'random':
+        gamma_values = np.random.uniform(0, 2 * np.pi, num_layers)
+        beta_values = np.random.uniform(0, np.pi, num_layers)
+        theta_values_by_order = {
+            k: np.random.uniform(-0.1, 0.1, num_layers) for k in gate_orders
+        }
+    elif strategy == 'zero':
+        gamma_values = np.zeros(num_layers)
+        beta_values = np.zeros(num_layers)
+        theta_values_by_order = {k: np.zeros(num_layers) for k in gate_orders}
+    else:
+        raise ValueError(f"Unknown strategy: {strategy}")
+ 
+    return gamma_values, beta_values, theta_values_by_order
+ 
+ 
+def flatten_multi_order_params(gamma_values, beta_values, theta_values_by_order, gate_orders):
+    """
+    Flatten gamma/beta/theta-by-order parameters into a single 1D array
+    suitable for scipy.optimize.minimize. Order is:
+    [gamma_0..gamma_L, beta_0..beta_L, theta_order[0]_0..L, theta_order[1]_0..L, ...]
+    with gate_orders taken in sorted order.
+    """
+    gate_orders = sorted(set(int(k) for k in gate_orders))
+    flat = list(gamma_values) + list(beta_values)
+    for k in gate_orders:
+        flat += list(theta_values_by_order[k])
+    return np.array(flat, dtype=float)
+ 
+ 
+def unflatten_multi_order_params(flat_params, num_layers, gate_orders):
+    """
+    Inverse of flatten_multi_order_params.
+ 
+    Returns
+    -------
+    tuple: (gamma_values, beta_values, theta_values_by_order)
+    """
+    gate_orders = sorted(set(int(k) for k in gate_orders))
+ 
+    gamma_values = flat_params[0:num_layers]
+    beta_values = flat_params[num_layers:2 * num_layers]
+ 
+    theta_values_by_order = {}
+    offset = 2 * num_layers
+    for k in gate_orders:
+        theta_values_by_order[k] = flat_params[offset:offset + num_layers]
+        offset += num_layers
+ 
+    return gamma_values, beta_values, theta_values_by_order
+ 
+ 
+def compute_diversity_score(counts, qubit_to_edge_map, G, method='entropy'):
+    """
+    Quantify the diversity of VALID solutions found in a set of measurement
+    counts. Intended as a secondary objective alongside validity rate during
+    pretraining, since high validity with all shots collapsing onto one
+    bitstring is much less useful than high validity spread across many
+    distinct valid tours.
+ 
+    Parameters
+    ----------
+    counts : dict
+        Bitstring -> count, as returned by simulate_large_circuit_in_batches.
+    qubit_to_edge_map : dict
+    G : networkx.DiGraph
+    method : str, optional
+        'entropy' (default): normalized Shannon entropy of the distribution
+            over valid bitstrings, in [0, 1]. 1 = perfectly uniform spread
+            across all observed valid bitstrings, 0 = all valid shots are
+            the same bitstring.
+        'unique_fraction': fraction of valid shots that landed on a bitstring
+            not yet counted (i.e. unique valid bitstrings / total valid shots).
+ 
+    Returns
+    -------
+    tuple: (diversity_score, num_unique_valid_bitstrings)
+        diversity_score is 0.0 if there are no valid shots at all.
+    """
+    valid_bitstrings = []
+    valid_counts = []
+ 
+    for bitstring, count in counts.items():
+        if is_valid_tsp_tour(bitstring, qubit_to_edge_map, G):
+            valid_bitstrings.append(bitstring)
+            valid_counts.append(count)
+ 
+    if not valid_bitstrings:
+        return 0.0, 0
+ 
+    total_valid = sum(valid_counts)
+    num_unique = len(valid_bitstrings)
+ 
+    if method == 'entropy':
+        probs = np.array(valid_counts, dtype=float) / total_valid
+        entropy = -np.sum(probs * np.log2(probs + 1e-12))
+        max_entropy = np.log2(num_unique) if num_unique > 1 else 1.0
+        diversity_score = entropy / max_entropy if max_entropy > 0 else 0.0
+    elif method == 'unique_fraction':
+        diversity_score = num_unique / total_valid
+    else:
+        raise ValueError(f"Unknown diversity method: {method}")
+ 
+    return diversity_score, num_unique
 

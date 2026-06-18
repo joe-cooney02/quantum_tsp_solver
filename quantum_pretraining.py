@@ -22,7 +22,15 @@ from quantum_helpers import (
     bind_qaoa_parameters,
     simulate_large_circuit_in_batches,
     count_valid_invalid,
-    create_qubit_to_edge_map
+    create_qubit_to_edge_map,
+    create_multi_order_qaoa_circuit,
+    bind_multi_order_parameters,
+    get_multi_order_initial_parameters,
+    flatten_multi_order_params,
+    unflatten_multi_order_params,
+    compute_diversity_score,
+    get_qaoa_statistics,
+    estimate_gate_count,
 )
 
 
@@ -289,3 +297,187 @@ graphs_dict, runtime_data, labelled_tt_data, qaoa_progress = QAOA_approx(
     custom_initial_params=pretrained_params  # Would need to add this parameter
 )
 """
+
+
+# =============================================================================
+# Multi-order validity + diversity pretraining (for gate-order hyperparameter
+# tuning). Generalizes pretrain_validity_layers in two ways:
+#   1. Accepts an arbitrary list of entangling-gate orders (1..num_qubits)
+#      instead of a single binary use_local_2q_gates flag, with one shared
+#      parameter per order per layer (see create_multi_order_qaoa_circuit).
+#   2. Optimizes a composite objective of validity rate AND solution
+#      diversity, rather than validity alone, since the goal of this
+#      pretraining stage is "valid AND varied" starting points for the main
+#      cost-optimization stage.
+# =============================================================================
+ 
+def pretrain_validity_diversity_multi_order(graph, gate_orders, num_layers=1,
+                                             shots=1024, batch_size=8,
+                                             sim_method='statevector',
+                                             max_iterations=50, verbose=True,
+                                             diversity_weight=0.3,
+                                             diversity_method='entropy',
+                                             device='CPU', label=None):
+    """
+    Pre-train a multi-order QAOA circuit to maximize a composite objective of
+    validity rate and solution diversity, for a given list of entangling-gate
+    orders.
+ 
+    This is the core unit of work for gate-order hyperparameter tuning. It is
+    intentionally self-contained and stateless (aside from reading `graph`),
+    so it can be called independently per gate-order configuration -- e.g.
+    from separate worker processes for parallel sweeps.
+ 
+    Parameters
+    ----------
+    graph : networkx.DiGraph
+        The TSP graph.
+    gate_orders : list of int
+        Which entangling-gate orders to test, each in [1, num_qubits].
+        E.g. [1] = single-qubit only, [4] = only 4-qubit entanglers,
+        [1, 4, 8] = combination of orders 1, 4, and 8.
+    num_layers : int, optional
+        Number of QAOA layers to pretrain together.
+    shots : int, optional
+        Measurement shots per objective evaluation.
+    batch_size : int, optional
+        Simulation batch size. Must be >= max(gate_orders).
+    sim_method : str, optional
+        'statevector' or 'density_matrix'.
+    max_iterations : int, optional
+        Max COBYLA iterations.
+    verbose : bool, optional
+    diversity_weight : float, optional
+        Weight on the diversity term relative to validity in the composite
+        objective: composite = validity_rate + diversity_weight * diversity_score.
+        Default 0.3 keeps validity as the dominant goal while still rewarding
+        spread across distinct valid tours.
+    diversity_method : str, optional
+        Passed to compute_diversity_score ('entropy' or 'unique_fraction').
+    device : str, optional
+        'CPU' or 'GPU'.
+    label : str, optional
+        Identifier for this trial. Defaults to a string built from gate_orders
+        and num_layers.
+ 
+    Returns
+    -------
+    dict with keys:
+        'label', 'gate_orders', 'num_layers', 'num_parameters',
+        'gamma_values', 'beta_values', 'theta_values_by_order',
+        'best_validity_rate', 'best_diversity_score', 'best_composite_score',
+        'best_iteration_stats', 'stats_history', 'gate_count_estimate',
+        'optimizer_result'
+    """
+    gate_orders = sorted(set(int(k) for k in gate_orders))
+ 
+    if label is None:
+        label = f"orders_{'-'.join(map(str, gate_orders))}_L{num_layers}"
+ 
+    qubit_to_edge_map = create_qubit_to_edge_map(graph)
+    num_qubits = len(qubit_to_edge_map)
+ 
+    gate_count_estimate = estimate_gate_count(gate_orders, num_qubits, batch_size, num_layers)
+ 
+    if verbose:
+        print(f"\n{'=' * 60}")
+        print(f"Pretraining [{label}]")
+        print(f"  gate_orders={gate_orders}, layers={num_layers}, "
+              f"params={num_layers * (2 + len(gate_orders))}, "
+              f"est. entangling gates={gate_count_estimate['total']}")
+        print(f"{'=' * 60}")
+ 
+    circuit = create_multi_order_qaoa_circuit(
+        graph, qubit_to_edge_map, gate_orders, num_layers=num_layers,
+        batch_size=batch_size
+    )
+ 
+    results_over_time = []
+    best_composite = [-np.inf]
+    best_iteration_stats = [None]
+ 
+    def objective(flat_params):
+        gamma_values, beta_values, theta_values_by_order = unflatten_multi_order_params(
+            flat_params, num_layers, gate_orders
+        )
+ 
+        bound_circuit = bind_multi_order_parameters(
+            circuit, gamma_values, beta_values, theta_values_by_order
+        )
+        counts = simulate_large_circuit_in_batches(
+            bound_circuit, batch_size, shots, sim_method, device=device
+        )
+ 
+        valid_shots, invalid_shots = count_valid_invalid(counts, qubit_to_edge_map, graph)
+        total_shots = valid_shots + invalid_shots
+        validity_rate = valid_shots / total_shots if total_shots > 0 else 0.0
+ 
+        diversity_score, num_unique_valid = compute_diversity_score(
+            counts, qubit_to_edge_map, graph, method=diversity_method
+        )
+ 
+        composite_score = validity_rate + diversity_weight * diversity_score
+ 
+        stats = get_qaoa_statistics(counts, qubit_to_edge_map, graph, len(results_over_time))
+        stats['validity_rate'] = validity_rate
+        stats['diversity_score'] = diversity_score
+        stats['num_unique_valid'] = num_unique_valid
+        stats['composite_score'] = composite_score
+        stats['gate_orders'] = gate_orders
+        stats['label'] = label
+ 
+        results_over_time.append(stats)
+ 
+        if composite_score > best_composite[0]:
+            best_composite[0] = composite_score
+            best_iteration_stats[0] = dict(stats)
+ 
+        if verbose and len(results_over_time) % 5 == 0:
+            print(f"  Iter {len(results_over_time):3d}: validity={validity_rate:.2%}, "
+                  f"diversity={diversity_score:.3f}, composite={composite_score:.3f} "
+                  f"(best={best_composite[0]:.3f})")
+ 
+        # Minimize negative composite score (i.e. maximize composite score)
+        return -composite_score
+ 
+    init_gamma, init_beta, init_theta = get_multi_order_initial_parameters(
+        num_layers, gate_orders, strategy='random'
+    )
+    x0 = flatten_multi_order_params(init_gamma, init_beta, init_theta, gate_orders)
+ 
+    if verbose:
+        print(f"Optimizing {len(x0)} parameters together...")
+ 
+    optimizer_result = minimize(
+        objective, x0=x0, method='COBYLA', options={'maxiter': max_iterations}
+    )
+ 
+    final_gamma, final_beta, final_theta = unflatten_multi_order_params(
+        optimizer_result.x, num_layers, gate_orders
+    )
+ 
+    if verbose:
+        best = best_iteration_stats[0] or {}
+        print(f"\n{'=' * 60}")
+        print(f"Pretraining [{label}] completed!")
+        print(f"  Best validity rate:  {best.get('validity_rate', 0):.2%}")
+        print(f"  Best diversity score: {best.get('diversity_score', 0):.3f}")
+        print(f"  Best composite score: {best_composite[0]:.3f}")
+        print(f"{'=' * 60}\n")
+ 
+    return {
+        'label': label,
+        'gate_orders': gate_orders,
+        'num_layers': num_layers,
+        'num_parameters': len(x0),
+        'gamma_values': list(final_gamma),
+        'beta_values': list(final_beta),
+        'theta_values_by_order': {k: list(v) for k, v in final_theta.items()},
+        'best_validity_rate': (best_iteration_stats[0] or {}).get('validity_rate', 0.0),
+        'best_diversity_score': (best_iteration_stats[0] or {}).get('diversity_score', 0.0),
+        'best_composite_score': best_composite[0],
+        'best_iteration_stats': best_iteration_stats[0],
+        'stats_history': results_over_time,
+        'gate_count_estimate': gate_count_estimate,
+        'optimizer_result': optimizer_result,
+    }

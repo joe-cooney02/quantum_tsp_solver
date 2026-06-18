@@ -25,14 +25,23 @@ from quantum_helpers import bind_qaoa_parameters, create_tsp_qaoa_circuit
 from quantum_helpers import get_initial_parameters, get_cost_expectation
 from quantum_helpers import simulate_large_circuit_in_batches, get_qaoa_statistics
 from quantum_helpers import create_warm_started_qaoa
-from opt_helpers import tour_to_graph, get_trip_time
+from quantum_helpers import (
+    create_multi_order_qaoa_circuit,
+    bind_multi_order_parameters,
+    get_multi_order_initial_parameters,
+    flatten_multi_order_params,
+    unflatten_multi_order_params,
+    split_locked_multi_group_params,
+    merge_locked_multi_group_params,
+)
+from opt_helpers import tour_to_graph, get_trip_time, get_warm_start_tour
 
 
 def QAOA_approx(graph, graphs_dict, runtime_data, tt_data, qaoa_progress, verbose=True, layers=None, shots=None, 
                 qubit_batch_size=None, inv_penalty_m=1, sim_method='statevector', label='QAOA', warm_start=None, 
                 exploration_strength=0, initialization_strategy='zero', custom_initial_params=None, 
                 lock_pretrained_layers=0, use_local_2q_gates=False, use_soft_validity=False, 
-                soft_validity_penalty_base=10.0, device='CPU'):
+                soft_validity_penalty_base=10.0, device='CPU', gate_orders=None):
     '''
     Parameters
     ----------
@@ -49,16 +58,38 @@ def QAOA_approx(graph, graphs_dict, runtime_data, tt_data, qaoa_progress, verbos
     exploration_strength: None or float
         If the warm-start is being used, how strongly to explore (default 0.2)
     custom_initial_params : list or None
-        Custom initial parameters [γ₀...γₙ, β₀...βₙ]. If provided with lock_pretrained_layers,
-        the first lock_pretrained_layers will be fixed during optimization.
+        Custom initial parameters. If gate_orders is None: [γ₀...γₙ, β₀...βₙ, θ₀...θₙ]
+        (length 3*layers). If gate_orders is provided: [γ₀...γₙ, β₀...βₙ,
+        θ_order[k1]_0...θ_order[k1]ₙ, θ_order[k2]_0...θ_order[k2]ₙ, ...] with
+        gate_orders taken in sorted order (length layers*(2+len(gate_orders))) --
+        this is exactly the format produced by
+        quantum_helpers.flatten_multi_order_params, which is what
+        quantum_pretraining.pretrain_validity_diversity_multi_order /
+        quantum_hyperparameter_tuning's trial results use. If provided with
+        lock_pretrained_layers, the first lock_pretrained_layers will be fixed
+        during optimization.
     lock_pretrained_layers : int
         Number of initial layers to lock (keep fixed) during optimization.
         Only applies if custom_initial_params is provided. Default 0 (no locking).
-        Example: lock_pretrained_layers=1 fixes γ₀ and β₀, optimizes γ₁, γ₂, β₁, β₂
+        Example: lock_pretrained_layers=1 fixes layer 0's parameters across
+        every parameter group (gamma, beta, and every theta_order), optimizes
+        the rest.
     use_local_2q_gates : bool
         If True, add local 2-qubit entangling gates (CZ) within batches.
         This enables entanglement while maintaining batched simulation compatibility.
-        Gates only connect qubits within the same batch (default: False)
+        Gates only connect qubits within the same batch (default: False).
+        Ignored if gate_orders is provided.
+    gate_orders : list of int or None
+        If provided, build the circuit with quantum_helpers.create_multi_order_qaoa_circuit
+        instead of the standard single-theta-per-layer circuit, using one
+        shared parameter per gate order per layer. This is how pretrained
+        multi-order validity/diversity parameters (from gate-order
+        hyperparameter tuning) get tested in the actual cost-optimization
+        stage: pass the same gate_orders used during pretraining, and the
+        pretrained flat parameter vector as custom_initial_params (optionally
+        with lock_pretrained_layers to keep the pretrained layers fixed).
+        Overrides use_local_2q_gates when set. qubit_batch_size must be
+        >= max(gate_orders), since a k-qubit gate cannot span batches.
     use_soft_validity : bool
         If True, use soft validity penalties that create gradients toward valid solutions.
         If False, use hard penalties (flat landscape). Default: False.
@@ -99,50 +130,70 @@ def QAOA_approx(graph, graphs_dict, runtime_data, tt_data, qaoa_progress, verbos
     # create and initialize circuit.
     qubit_to_edge_map = create_qubit_to_edge_map(graph)
     
+    if gate_orders is not None:
+        gate_orders = sorted(set(int(k) for k in gate_orders))
+        if qubit_batch_size < max(gate_orders):
+            raise ValueError(
+                f"qubit_batch_size ({qubit_batch_size}) must be >= max(gate_orders) "
+                f"({max(gate_orders)}); a k-qubit gate cannot span multiple batches."
+            )
+        num_param_groups = 2 + len(gate_orders)
+    else:
+        num_param_groups = 3
+    
     # Use custom initial parameters if provided, otherwise generate them
     if custom_initial_params is not None:
         # Custom params should be [gamma_0, ..., gamma_n, beta_0, ..., beta_n, etc...]
-        if len(custom_initial_params) != 3 * layers:
-            raise ValueError(f"custom_initial_params must have length {3*layers} "
+        expected_len = num_param_groups * layers
+        if len(custom_initial_params) != expected_len:
+            raise ValueError(f"custom_initial_params must have length {expected_len} "
                            f"(got {len(custom_initial_params)})")
-        init_params = custom_initial_params
-        gamma_values = init_params[:layers]
-        beta_values = init_params[layers:2*layers]
-        theta_values = init_params[2*layers:]
+        init_params = list(custom_initial_params)
     else:
-        gamma_values, beta_values, theta_values = get_initial_parameters(layers, strategy=initialization_strategy)
-        init_params = [i for i in gamma_values] + [i for i in beta_values] + [i for i in theta_values]
+        if gate_orders is not None:
+            gamma_values, beta_values, theta_by_order = get_multi_order_initial_parameters(
+                layers, gate_orders,
+                strategy=initialization_strategy if initialization_strategy in ('random', 'zero') else 'zero'
+            )
+            init_params = flatten_multi_order_params(
+                gamma_values, beta_values, theta_by_order, gate_orders
+            ).tolist()
+        else:
+            gamma_values, beta_values, theta_values = get_initial_parameters(layers, strategy=initialization_strategy)
+            init_params = [i for i in gamma_values] + [i for i in beta_values] + [i for i in theta_values]
     
-    # Handle parameter locking
+    # Handle parameter locking (generalized across an arbitrary number of
+    # equal-length parameter groups: [gamma, beta] plus one group per gate order)
     if lock_pretrained_layers > 0:
         if custom_initial_params is None:
             raise ValueError("lock_pretrained_layers requires custom_initial_params to be provided")
         if lock_pretrained_layers >= layers:
             raise ValueError(f"lock_pretrained_layers ({lock_pretrained_layers}) must be less than total layers ({layers})")
         
-        # Extract locked and optimizable parameters
-        locked_gammas = init_params[:lock_pretrained_layers]
-        locked_betas = init_params[layers:layers + lock_pretrained_layers]
-        locked_thetas = init_params[2*layers: 2*layers + lock_pretrained_layers]
+        locked_params, optimizable_init_params = split_locked_multi_group_params(
+            init_params, num_param_groups, layers, lock_pretrained_layers
+        )
         
-        optimizable_gammas = init_params[lock_pretrained_layers:layers]
-        optimizable_betas = init_params[layers + lock_pretrained_layers:2*layers]
-        optimizable_thetas = init_params[2*layers + lock_pretrained_layers:]
-        
-        locked_params = locked_gammas + locked_betas + locked_thetas
-        optimizable_init_params = optimizable_gammas + optimizable_betas + optimizable_thetas
-        
-        print("\nParameter Locking Enabled:")
-        print(f"  Locked layers: 0-{lock_pretrained_layers-1} ({len(locked_params)} params)")
-        print(f"  Optimizable layers: {lock_pretrained_layers}-{layers-1} ({len(optimizable_init_params)} params)")
-        print(f"  Locked gammas: {locked_gammas}")
-        print(f"  Locked betas: {locked_betas}")
-        print(f"  Locked thetas: {locked_thetas}")
+        if verbose:
+            print("\nParameter Locking Enabled:")
+            print(f"  Locked layers: 0-{lock_pretrained_layers-1} ({len(locked_params)} params)")
+            print(f"  Optimizable layers: {lock_pretrained_layers}-{layers-1} ({len(optimizable_init_params)} params)")
+            if gate_orders is not None:
+                print(f"  Parameter groups: gamma, beta, theta_order{gate_orders} "
+                      f"({num_param_groups} groups total)")
     else:
         locked_params = None
         optimizable_init_params = init_params
     
-    if warm_start == None:
+    if gate_orders is not None:
+        warm_start_tour = None
+        if warm_start is not None:
+            warm_start_tour = warm_start if isinstance(warm_start, list) else get_warm_start_tour(graph, method=warm_start)
+        circuit = create_multi_order_qaoa_circuit(graph, qubit_to_edge_map, gate_orders, num_layers=layers,
+                                                  warm_start_tour=warm_start_tour,
+                                                  exploration_strength=exploration_strength,
+                                                  batch_size=qubit_batch_size)
+    elif warm_start == None:
         circuit = create_tsp_qaoa_circuit(graph, qubit_to_edge_map, num_layers=layers,
                                          use_local_2q_gates=use_local_2q_gates, batch_size=qubit_batch_size)
     else:
@@ -161,7 +212,8 @@ def QAOA_approx(graph, graphs_dict, runtime_data, tt_data, qaoa_progress, verbos
                           args=(circuit, qubit_batch_size, shots, sim_method,
                                 layers, graph, qubit_to_edge_map, qaoa_results_over_time, 
                                 inv_penalty, locked_params, lock_pretrained_layers,
-                                use_soft_validity, soft_validity_penalty_base, device),
+                                use_soft_validity, soft_validity_penalty_base, device,
+                                gate_orders, num_param_groups),
                           method='COBYLA')
     
     end_time = time.time()
@@ -260,13 +312,3 @@ def run_QAOA(optimizable_parameters, circuit, batch_size, shots, sim_method, lay
     results_over_time.append(stats)
     
     return expectation_val
-
-
-
-
-
-
-
-
-
-

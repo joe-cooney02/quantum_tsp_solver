@@ -29,6 +29,7 @@ curr_prob = '4m_4_1'
 ttm = get_travel_time_matrix(f'{curr_prob}/ttm.txt')
 address_set = get_address_set(f'{curr_prob}/address-set.txt')
 dirs_mat = get_directions_matrix(f'{curr_prob}/dir-mat.json')
+save_all = True
 
 
 # base graph
@@ -249,7 +250,6 @@ if 4 in run_expts:
 # =============================================================================
 # Visualizations and data saving
 # =============================================================================
-save_all = True
 
 
 experiment_results = {

@@ -4,5 +4,6 @@ __pycache__
 .stfolder
 .env
 .venv
+.python-version
 spyder-env
 requirements.txt

@@ -29,6 +29,12 @@ elsewhere (see aggregate_external_trial_results).
 
 import time
 import matplotlib.pyplot as plt
+import numpy as np
+import os
+import json
+import datetime
+import csv
+import warnings
 
 from quantum_pretraining import pretrain_validity_diversity_multi_order
 from quantum_helpers import (
@@ -494,3 +500,520 @@ def plot_best_trial_solution_diversity(graph, sweep_results, metric='best_compos
     )
 
     return best_label, fig, ax
+
+# =============================================================================
+# Data saving, loading, and aggregation
+#
+# Design notes
+# ------------
+# JSON is the storage format: human-readable, git-diffable, and requires no
+# extra dependencies. Two serialization problems need handling:
+#
+#   1. NumPy types (np.float64, np.ndarray, np.int64) are not JSON-native.
+#      _to_python() recursively converts them to Python scalars/lists.
+#
+#   2. JSON requires all dict keys to be strings. Two dicts in trial results
+#      have integer keys: theta_values_by_order ({2: [...]}) and
+#      gate_count_estimate ({2: 15, 'total': 15}). These are serialized with
+#      string keys and restored to integers on load via _restore_numeric_keys().
+#
+#   3. scipy.optimize.OptimizeResult is not serializable. Only the fields
+#      needed for downstream analysis are extracted and stored.
+#
+# File layout produced by save_sweep_results:
+#   save_dir/
+#     {sweep_name}_index.json    -- summary scalars for every trial (fast to load)
+#     {sweep_name}_summary.csv   -- same content, spreadsheet-friendly
+#     trials/
+#       {label}.json             -- full trial data including stats_history
+# =============================================================================
+ 
+# --- Serialization helpers ---------------------------------------------------
+ 
+def _to_python(obj):
+    """
+    Recursively convert an object tree containing NumPy scalars, arrays,
+    scipy OptimizeResult objects, and networkx graphs into plain Python types
+    suitable for json.dump.
+ 
+    scipy OptimizeResult is reduced to a plain dict of the fields useful for
+    downstream analysis: x (optimal parameters), fun (final objective value),
+    success, message, and nfev (number of function evaluations).
+ 
+    networkx DiGraph / Graph (which can appear as best_tour in stats returned
+    by get_qaoa_statistics) is serialized as a list of (u, v, weight) triples
+    so the tour structure is fully recoverable.
+    """
+    # networkx graphs -- check before dict since Graph is dict-like internally
+    try:
+        import networkx as nx
+        if isinstance(obj, (nx.DiGraph, nx.Graph)):
+            return {
+                '__type__': 'DiGraph',
+                'edges': [[u, v, d] for u, v, d in obj.edges(data=True)],
+                'nodes': list(obj.nodes()),
+            }
+    except ImportError:
+        pass
+ 
+    # scipy OptimizeResult
+    try:
+        from scipy.optimize import OptimizeResult
+        if isinstance(obj, OptimizeResult):
+            return {
+                '__type__': 'OptimizeResult',
+                'x': _to_python(list(obj.x)),
+                'fun': float(obj.fun),
+                'success': bool(obj.success),
+                'message': str(obj.message),
+                'nfev': int(obj.nfev),
+            }
+    except ImportError:
+        pass
+ 
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, (np.float64, np.float32, np.floating)):
+        return float(obj)
+    if isinstance(obj, (np.int64, np.int32, np.integer)):
+        return int(obj)
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    if isinstance(obj, dict):
+        return {k: _to_python(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_to_python(v) for v in obj]
+    return obj
+ 
+ 
+def _restore_numeric_keys(obj):
+    """
+    Recursively walk a decoded JSON object and convert any dict key that
+    looks like an integer back to int. JSON encodes all dict keys as strings;
+    this restores the original int-keyed dicts (theta_values_by_order,
+    gate_count_estimate). Keys that are not pure digits (e.g. 'total', 'label')
+    are left as strings.
+    """
+    if isinstance(obj, dict):
+        restored = {}
+        for k, v in obj.items():
+            new_key = int(k) if isinstance(k, str) and k.lstrip('-').isdigit() else k
+            restored[new_key] = _restore_numeric_keys(v)
+        return restored
+    if isinstance(obj, list):
+        return [_restore_numeric_keys(v) for v in obj]
+    return obj
+ 
+ 
+# --- Single trial I/O --------------------------------------------------------
+ 
+def save_trial_result(trial_result, save_dir, filename=None, save_history=True):
+    """
+    Save a single trial result dict to a JSON file.
+ 
+    Parameters
+    ----------
+    trial_result : dict
+        Result from run_single_hyperparameter_trial /
+        pretrain_validity_diversity_multi_order.
+    save_dir : str
+        Directory to write the file into (created if it doesn't exist).
+    filename : str or None, optional
+        JSON filename (without directory). Defaults to '{label}.json'.
+    save_history : bool, optional
+        Whether to include stats_history (full per-iteration data) in the
+        saved file. Set False to produce smaller files when you only need
+        the scalar summary metrics. Default True.
+ 
+    Returns
+    -------
+    str: Full path to the saved file.
+    """
+    os.makedirs(save_dir, exist_ok=True)
+ 
+    if filename is None:
+        safe_label = trial_result['label'].replace('/', '_').replace('\\', '_')
+        filename = f"{safe_label}.json"
+ 
+    filepath = os.path.join(save_dir, filename)
+ 
+    data = _to_python(trial_result)
+    if not save_history:
+        data.pop('stats_history', None)
+        data.pop('best_iteration_stats', None)
+ 
+    data['_saved_at'] = datetime.now().isoformat(timespec='seconds')
+ 
+    with open(filepath, 'w') as f:
+        json.dump(data, f, indent=2)
+ 
+    return filepath
+ 
+ 
+def load_trial_result(filepath):
+    """
+    Load a trial result from a JSON file saved by save_trial_result.
+ 
+    Parameters
+    ----------
+    filepath : str
+        Path to the JSON file.
+ 
+    Returns
+    -------
+    dict: Trial result with integer dict keys restored on theta_values_by_order
+        and gate_count_estimate. stats_history and best_iteration_stats are
+        included only if they were saved (i.e. save_history=True at save time).
+ 
+    Notes
+    -----
+    optimizer_result is stored as a plain dict (not a scipy OptimizeResult),
+    with the same keys: 'x', 'fun', 'success', 'message', 'nfev'.
+    """
+    with open(filepath, 'r') as f:
+        data = json.load(f)
+ 
+    return _restore_numeric_keys(data)
+ 
+ 
+# --- Full sweep I/O ----------------------------------------------------------
+ 
+_TRIAL_SUBDIR = 'trials'
+_INDEX_SUFFIX = '_index.json'
+_CSV_SUFFIX = '_summary.csv'
+ 
+# Scalar fields written to the index JSON and summary CSV.
+# These cover everything needed to compare trials and make plots without
+# loading full per-iteration history.
+_SUMMARY_FIELDS = [
+    'label', 'gate_orders', 'num_layers', 'num_parameters',
+    'best_validity_rate', 'best_diversity_score', 'best_composite_score',
+    'runtime_seconds',
+    ('gate_count_estimate', 'total'),  # nested field: (outer_key, inner_key)
+]
+ 
+ 
+def _extract_summary_row(trial_result):
+    """Extract the scalar summary fields from a trial result into a flat dict."""
+    row = {}
+    for field in _SUMMARY_FIELDS:
+        if isinstance(field, tuple):
+            outer, inner = field
+            col_name = f"{outer}.{inner}"
+            row[col_name] = trial_result.get(outer, {}).get(inner)
+        else:
+            val = trial_result.get(field)
+            # gate_orders is a list; represent as a compact string for CSV
+            row[field] = str(val) if isinstance(val, list) else val
+    return row
+ 
+ 
+def save_sweep_results(sweep_results, save_dir, sweep_name=None, save_history=True):
+    """
+    Save a complete sweep (dict of label -> trial_result) to disk.
+ 
+    Produces three artifacts under save_dir:
+ 
+    - trials/{label}.json        Full trial data per trial (one file each).
+    - {sweep_name}_index.json    Summary scalars for all trials, fast to load
+                                 without reading every trial file.
+    - {sweep_name}_summary.csv   Same content as the index, spreadsheet-friendly.
+ 
+    Parameters
+    ----------
+    sweep_results : dict
+        {label: trial_result, ...} as returned by run_hyperparameter_sweep or
+        aggregate_external_trial_results.
+    save_dir : str
+        Root directory for this sweep's outputs (created if needed).
+    sweep_name : str or None, optional
+        Prefix for the index and CSV files. Defaults to
+        'sweep_{YYYYMMDD_HHMMSS}'.
+    save_history : bool, optional
+        Whether to save per-iteration stats_history in each trial file.
+        The index JSON and CSV always contain only scalar summaries regardless
+        of this flag.
+ 
+    Returns
+    -------
+    dict with keys:
+        'save_dir', 'sweep_name', 'index_path', 'csv_path',
+        'trial_paths' (dict of label -> filepath)
+    """
+    if sweep_name is None:
+        sweep_name = 'sweep_' + datetime.now().strftime('%Y%m%d_%H%M%S')
+ 
+    trials_dir = os.path.join(save_dir, _TRIAL_SUBDIR)
+    os.makedirs(trials_dir, exist_ok=True)
+ 
+    trial_paths = {}
+    summary_rows = []
+ 
+    for label, trial_result in sweep_results.items():
+        path = save_trial_result(trial_result, trials_dir, save_history=save_history)
+        trial_paths[label] = path
+        summary_rows.append(_extract_summary_row(trial_result))
+ 
+    # Index JSON
+    index_path = os.path.join(save_dir, sweep_name + _INDEX_SUFFIX)
+    index_data = {
+        'sweep_name': sweep_name,
+        'saved_at': datetime.now().isoformat(timespec='seconds'),
+        'num_trials': len(sweep_results),
+        'trial_files': {label: os.path.relpath(path, save_dir)
+                        for label, path in trial_paths.items()},
+        'summaries': {row['label']: row for row in summary_rows},
+    }
+    with open(index_path, 'w') as f:
+        json.dump(_to_python(index_data), f, indent=2)
+ 
+    # Summary CSV
+    csv_path = os.path.join(save_dir, sweep_name + _CSV_SUFFIX)
+    if summary_rows:
+        fieldnames = list(summary_rows[0].keys())
+        with open(csv_path, 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(_to_python(summary_rows))
+ 
+    return {
+        'save_dir': save_dir,
+        'sweep_name': sweep_name,
+        'index_path': index_path,
+        'csv_path': csv_path,
+        'trial_paths': trial_paths,
+    }
+ 
+ 
+def load_sweep_results(save_dir, sweep_name=None, load_history=True):
+    """
+    Load a complete sweep from disk into a sweep_results dict.
+ 
+    If sweep_name is given, loads the corresponding index file and uses it
+    to locate trial files. If sweep_name is None, searches save_dir for an
+    index file automatically (raises ValueError if there is more than one).
+ 
+    Falls back to scanning the trials/ subdirectory for any .json files if
+    no index file is found.
+ 
+    Parameters
+    ----------
+    save_dir : str
+        Root directory written by save_sweep_results.
+    sweep_name : str or None, optional
+    load_history : bool, optional
+        If False, omit stats_history and best_iteration_stats from each
+        loaded trial (they'll simply be absent if not saved, or dropped here
+        if they were saved). Useful for quickly loading just summary data.
+ 
+    Returns
+    -------
+    dict: {label: trial_result, ...}, suitable for passing directly to all
+        visualization functions.
+ 
+    Raises
+    ------
+    FileNotFoundError: if save_dir doesn't exist.
+    ValueError: if sweep_name is None and multiple index files are found.
+    """
+    if not os.path.isdir(save_dir):
+        raise FileNotFoundError(f"save_dir not found: {save_dir}")
+ 
+    # Resolve index file
+    if sweep_name is not None:
+        index_path = os.path.join(save_dir, sweep_name + _INDEX_SUFFIX)
+    else:
+        candidates = [f for f in os.listdir(save_dir) if f.endswith(_INDEX_SUFFIX)]
+        if len(candidates) == 1:
+            index_path = os.path.join(save_dir, candidates[0])
+        elif len(candidates) > 1:
+            raise ValueError(
+                f"Multiple index files found in {save_dir}: {candidates}. "
+                f"Specify sweep_name to disambiguate."
+            )
+        else:
+            index_path = None
+ 
+    # Collect trial file paths
+    if index_path and os.path.isfile(index_path):
+        with open(index_path, 'r') as f:
+            index_data = json.load(f)
+        trial_relpaths = index_data.get('trial_files', {})
+        trial_paths = {
+            label: os.path.join(save_dir, relpath)
+            for label, relpath in trial_relpaths.items()
+        }
+    else:
+        # Fallback: scan trials/ subdirectory
+        trials_dir = os.path.join(save_dir, _TRIAL_SUBDIR)
+        if not os.path.isdir(trials_dir):
+            raise FileNotFoundError(
+                f"No index file and no trials/ subdirectory found in {save_dir}."
+            )
+        trial_paths = {
+            os.path.splitext(fname)[0]: os.path.join(trials_dir, fname)
+            for fname in os.listdir(trials_dir)
+            if fname.endswith('.json')
+        }
+ 
+    sweep_results = {}
+    for label, path in trial_paths.items():
+        if not os.path.isfile(path):
+            warnings.warn(f"Trial file not found, skipping: {path}")
+            continue
+        trial = load_trial_result(path)
+        if not load_history:
+            trial.pop('stats_history', None)
+            trial.pop('best_iteration_stats', None)
+        sweep_results[trial.get('label', label)] = trial
+ 
+    return sweep_results
+ 
+ 
+def load_sweep_index(save_dir, sweep_name=None):
+    """
+    Load only the lightweight index file from a saved sweep, without reading
+    any individual trial files. Returns the summary scalars for all trials,
+    suitable for quick inspection or deciding which trials to load in full.
+ 
+    Parameters
+    ----------
+    save_dir : str
+    sweep_name : str or None, optional
+ 
+    Returns
+    -------
+    dict: The raw index data, including 'summaries' (label -> scalar dict),
+        'sweep_name', 'saved_at', 'num_trials', and 'trial_files'.
+    """
+    if sweep_name is not None:
+        index_path = os.path.join(save_dir, sweep_name + _INDEX_SUFFIX)
+    else:
+        candidates = [f for f in os.listdir(save_dir) if f.endswith(_INDEX_SUFFIX)]
+        if len(candidates) == 1:
+            index_path = os.path.join(save_dir, candidates[0])
+        elif len(candidates) > 1:
+            raise ValueError(
+                f"Multiple index files in {save_dir}: {candidates}. "
+                f"Specify sweep_name."
+            )
+        else:
+            raise FileNotFoundError(f"No index file found in {save_dir}.")
+ 
+    with open(index_path, 'r') as f:
+        return json.load(f)
+ 
+ 
+# --- Aggregation -------------------------------------------------------------
+ 
+def merge_sweep_results(*sweep_dicts, on_duplicate='warn'):
+    """
+    Merge two or more sweep_results dicts (e.g. results from parallel workers
+    that each ran a subset of trials) into one combined dict.
+ 
+    Parameters
+    ----------
+    *sweep_dicts : dicts
+        Any number of {label: trial_result} dicts, in merge-priority order
+        (last writer wins on duplicates when on_duplicate='keep_last').
+    on_duplicate : str, optional
+        What to do when the same label appears in more than one input dict:
+        'warn'        (default) Keep the first occurrence, emit a warning.
+        'keep_last'   Overwrite with the later occurrence silently.
+        'error'       Raise a ValueError.
+ 
+    Returns
+    -------
+    dict: {label: trial_result, ...}
+    """
+    merged = {}
+    for sweep in sweep_dicts:
+        for label, trial in sweep.items():
+            if label in merged:
+                if on_duplicate == 'error':
+                    raise ValueError(f"Duplicate trial label during merge: '{label}'")
+                elif on_duplicate == 'warn':
+                    warnings.warn(
+                        f"Duplicate trial label '{label}' during merge; "
+                        f"keeping first occurrence. Use on_duplicate='keep_last' "
+                        f"to override."
+                    )
+                    continue
+                # 'keep_last': fall through to overwrite
+            merged[label] = trial
+    return merged
+ 
+ 
+# --- Summary table -----------------------------------------------------------
+ 
+def get_sweep_summary(sweep_results, sort_by='best_composite_score', ascending=False):
+    """
+    Extract a list of scalar-summary dicts for all trials in a sweep,
+    suitable for quick inspection (print as a table) or loading into pandas.
+ 
+    Parameters
+    ----------
+    sweep_results : dict
+        {label: trial_result, ...}
+    sort_by : str, optional
+        Field to sort rows by. Default 'best_composite_score'.
+    ascending : bool, optional
+        Sort direction. Default False (best score first).
+ 
+    Returns
+    -------
+    list of dict: One dict per trial, with keys:
+        label, gate_orders, num_layers, num_parameters,
+        best_validity_rate (%), best_diversity_score, best_composite_score,
+        gate_count_total, runtime_seconds.
+ 
+    Example
+    -------
+    >>> rows = get_sweep_summary(sweep_results)
+    >>> for row in rows:
+    ...     print(row)
+    # or: import pandas as pd; pd.DataFrame(rows)
+    """
+    rows = []
+    for label, trial in sweep_results.items():
+        rows.append({
+            'label': label,
+            'gate_orders': trial.get('gate_orders', []),
+            'num_layers': trial.get('num_layers'),
+            'num_parameters': trial.get('num_parameters'),
+            'best_validity_%': round(100 * trial.get('best_validity_rate', 0), 2),
+            'best_diversity_score': round(float(trial.get('best_diversity_score', 0)), 4),
+            'best_composite_score': round(float(trial.get('best_composite_score', 0)), 4),
+            'gate_count_total': trial.get('gate_count_estimate', {}).get('total'),
+            'runtime_seconds': round(trial.get('runtime_seconds', float('nan')), 2),
+        })
+ 
+    if sort_by in (rows[0] if rows else {}):
+        rows.sort(key=lambda r: (r[sort_by] is None, r[sort_by]),
+                  reverse=not ascending)
+ 
+    return rows
+ 
+ 
+def print_sweep_summary(sweep_results, sort_by='best_composite_score', ascending=False):
+    """
+    Print get_sweep_summary as a formatted table directly to stdout.
+ 
+    Parameters
+    ----------
+    sweep_results : dict
+    sort_by, ascending : passed to get_sweep_summary.
+    """
+    rows = get_sweep_summary(sweep_results, sort_by=sort_by, ascending=ascending)
+    if not rows:
+        print("No trials to summarize.")
+        return
+ 
+    col_widths = {k: max(len(str(k)), max(len(str(r[k])) for r in rows))
+                  for k in rows[0]}
+ 
+    header = '  '.join(str(k).ljust(col_widths[k]) for k in rows[0])
+    print(header)
+    print('-' * len(header))
+    for row in rows:
+        print('  '.join(str(row[k]).ljust(col_widths[k]) for k in row))

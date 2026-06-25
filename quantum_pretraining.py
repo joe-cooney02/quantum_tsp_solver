@@ -349,9 +349,10 @@ def pretrain_validity_diversity_multi_order(graph, gate_orders, num_layers=1,
     verbose : bool, optional
     diversity_weight : float, optional
         Weight on the diversity term relative to validity in the composite
-        objective: composite = validity_rate + diversity_weight * diversity_score.
+        objective: composite = validity_rate + (diversity_weight * diversity_score * validity_rate).
         Default 0.3 keeps validity as the dominant goal while still rewarding
         spread across distinct valid tours.
+        The scaling of diversity value with validity rate keeps this true at all levels of validity
     diversity_method : str, optional
         Passed to compute_diversity_score ('entropy' or 'unique_fraction').
     device : str, optional
@@ -416,7 +417,7 @@ def pretrain_validity_diversity_multi_order(graph, gate_orders, num_layers=1,
             counts, qubit_to_edge_map, graph, method=diversity_method
         )
  
-        composite_score = validity_rate + diversity_weight * diversity_score
+        composite_score = validity_rate + diversity_weight * diversity_score * validity_rate
  
         stats = get_qaoa_statistics(counts, qubit_to_edge_map, graph, len(results_over_time))
         stats['validity_rate'] = validity_rate
